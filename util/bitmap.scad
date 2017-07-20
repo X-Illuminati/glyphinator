@@ -30,8 +30,9 @@
  *
  * bitmap - 2D vector with z-height for each cube
  * center - center cubes around the origin
+ * expansion - size of gap around each pixel (screendoor)
  */
-module 2dbitmap(bitmap=[[1,0],[0,1]], center=false)
+module 2dbitmap(bitmap=[[1,0],[0,1]], center=false, expansion=0)
 {
 	ylen=len(bitmap)-1;
 
@@ -41,15 +42,18 @@ module 2dbitmap(bitmap=[[1,0],[0,1]], center=false)
 			translate([x-(center?xlen/2:0),
 			           ylen-y-(center?ylen/2:0),
 			           0])
-				cube([1,1,bitmap[y][x]], center=center);
+				cube([1-expansion,
+				      1-expansion,
+				      bitmap[y][x]],
+				     center=center);
 	}
 }
 
-module 1dbitmap(bitmap=[1,0,1,0,1], center=false)
-	2dbitmap([bitmap], center);
+module 1dbitmap(bitmap=[1,0,1,0,1], center=false, expansion=0)
+	2dbitmap([bitmap], center, expansion);
 
 translate([0,10,0]) scale([1,10,1])
-	1dbitmap(bitmap=[1,1,0,2,0,0,1], center=true);
+	1dbitmap(bitmap=[1,1,0,2,0,0,1], center=true, expansion=.1);
 
 scale([2,2,1])
 	2dbitmap(bitmap=[[1,0,2,1],[0,3,3,0],[1,1,0,1]],
