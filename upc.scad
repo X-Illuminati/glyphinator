@@ -112,7 +112,8 @@ module upc_symbol(symbol, bar=1, space=0, parity=true, reverse=false)
  * space - space representation
  * (see documentation in bitmap.scad)
  */
-module UPC_A(string, bar=1, space=0)
+module UPC_A(string, bar=1, space=0,
+	font="Liberation Mono:style=Bold", fontsize=1.5)
 {
 
 	if ((len(string)!=11)&&(len(string)!=12))
@@ -175,11 +176,13 @@ module UPC_A(string, bar=1, space=0)
 	//i ranges from 0 to 16
 	function get_parity(i) = ((i>8)&&(i<15))?false:true;
 
-	//string has 11 or 12 numerals
-	//module is called recursively with
+	//draw individual upc symbol bars based on contents
+	//of supplied string
+	//string must contain 11 or 12 numerals
+	//this module is then called recursively with
 	//i incrementing from 0 to 16
-	//x is also incremented to translate
-	//each symbol along the x-axis
+	//x is also incremented to translate each symbol
+	//along the x-axis
 	module draw_symbol(string, bar=1, space=0, x=0, i=0)
 	{
 		translate([0,27.55-get_height(i),0])
@@ -194,11 +197,60 @@ module UPC_A(string, bar=1, space=0)
 				i+1);
 	}
 
+	//returns the position x/y for the text digit in
+	//position i ranging from 0 to 11
+	function get_text_pos(i) =
+	[
+		0.33*(
+			(i==0)?0:
+			(i<6)?(
+				upc_symbol_len(10)+upc_symbol_len(11)+
+				upc_symbol_len(0)*(i+0.25)
+			):
+			(i<11)?(
+				upc_symbol_len(10)+upc_symbol_len(11)+
+				upc_symbol_len(12)+
+				upc_symbol_len(0)*(i+0.25)
+			):
+			(
+				upc_symbol_len(10)+upc_symbol_len(11)+
+				upc_symbol_len(12)+
+				upc_symbol_len(10)+upc_symbol_len(11)+
+				upc_symbol_len(0)*(i+0.25)
+			)),
+		(i==0)?(27.55-25.9):
+		(i==11)?(27.55-25.9):0,
+		0
+	];
+
+	//draw individual text numerals based on contents
+	//of supplied string
+	//string must contain 11 or 12 numerals
+	//this module is then called recursively with
+	//i incrementing from 0 to 11
+	module draw_text(string, font, fontsize, i=0)
+	{
+		numeral=string[i]?string[i]:
+			str(calculate_checkdigit(string));
+		translate(get_text_pos(i))
+			text(numeral, font=font, size=fontsize);
+
+		if (i<11)
+			draw_text(string, font, fontsize, i+1);
+	}
+
 	draw_symbol(string, bar=bar, space=space);
+	if (font)
+		if (len(bar))
+			color(bar) linear_extrude(height=1)
+				draw_text(string, font, fontsize);
+		else
+			linear_extrude(height=bar)
+				draw_text(string, font, fontsize);
 }
 
 /* examples */
-//UPC_A("333333333331", bar="black");
+//UPC_A("333333333331", bar="black", font=undef);
 //UPC_A("33333333333", bar="black"); //checkdigit 1
 //UPC_A("03600029145", bar="black"); //checkdigit 2
 //UPC_A("04210000526", bar="black"); //checkdigit 4
