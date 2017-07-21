@@ -29,7 +29,6 @@
  *     See the bitmap library for more details.
  *
  * TODO:
- *   Add checksum calculation
  *   Add EAN-13 support
  ********************************************************/
 use <util/bitmap.scad>
@@ -115,9 +114,12 @@ module upc_symbol(symbol, bar=1, space=0, parity=true, reverse=false)
  */
 module UPC_A(string, bar=1, space=0)
 {
-	if (len(string)!=12)
-		echo("WARNING: UPC string must be exactly 12 digits");
 
+	if ((len(string)!=11)&&(len(string)!=12))
+		echo("WARNING: UPC string must be exactly 11 or 12 digits");
+
+	//translates the numeral 'digit' from
+	//character to integer form
 	function translate_symbol(digit) =
 		(digit=="0")?0:
 		(digit=="1")?1:
@@ -130,22 +132,54 @@ module UPC_A(string, bar=1, space=0)
 		(digit=="8")?8:
 		(digit=="9")?9: undef;
 
+	//calculates the checkdigit by recursively
+	//parsing the 11-numeral string provided
+	//i is incremented from 0 to 10
+	//i has a special default value of -1 to
+	//conduct some final processing on the answer
+	function calculate_checkdigit(string, i=-1) =
+		(i==10)?
+			translate_symbol(string[i])*3:
+		(i==-1)?
+			(0==calculate_checkdigit(string,i=0)%10)?
+				0:(10-calculate_checkdigit(string,i=0)%10)
+		:
+			((i%2)?1:3)*translate_symbol(string[i])
+				+calculate_checkdigit(string, i+1);
+
+	//returns the symbol to draw at position i
+	//i ranges from 0 to 16
 	function get_symbol(string, i) =
 		(i==0)?10:
 		(i==1)?11:
 		(i<8)?translate_symbol(string[i-2]):
 		(i==8)?12:
-		(i<15)?translate_symbol(string[i-3]):
+		(i<14)?translate_symbol(string[i-3]):
+		(i==14)?
+			(len(string)>11)?
+				translate_symbol(string[i-3]):
+				calculate_checkdigit(string):
 		(i==15)?11:
 		(i==16)?10: undef;
-		
+
+	//returns nominal symbol height for the
+	//symbol in position i
+	//i ranges from 0 to 16
 	function get_height(i) =
 		(i<3)?27.55:
 		(i==8)?27.55:
 		(i>13)?27.55: 25.9;
 
+	//returns whether odd or even parity should
+	//be used for the symbol in position i
+	//i ranges from 0 to 16
 	function get_parity(i) = ((i>8)&&(i<15))?false:true;
 
+	//string has 11 or 12 numerals
+	//module is called recursively with
+	//i incrementing from 0 to 16
+	//x is also incremented to translate
+	//each symbol along the x-axis
 	module draw_symbol(string, bar=1, space=0, x=0, i=0)
 	{
 		translate([0,27.55-get_height(i),0])
@@ -163,5 +197,10 @@ module UPC_A(string, bar=1, space=0)
 	draw_symbol(string, bar=bar, space=space);
 }
 
-/* example */
-UPC_A("333333333331", bar="black");
+/* examples */
+//UPC_A("333333333331", bar="black");
+//UPC_A("33333333333", bar="black"); //checkdigit 1
+//UPC_A("03600029145", bar="black"); //checkdigit 2
+//UPC_A("04210000526", bar="black"); //checkdigit 4
+//UPC_A("12345678901", bar="black"); //checkdigit 2
+UPC_A("01234554321", bar="black"); //checkdigit 0
