@@ -22,11 +22,13 @@
  * Depends on bitmap.scad library.
  *
  * API:
- *   UPC_A(string, bar, space)
+ *   UPC_A(string, bar, space, font, fontsize)
  *     Generates the UPC-A barcode representing string.
  *     The bar and space parameters can be used to
  *     change the appearance of the barcode.
  *     See the bitmap library for more details.
+ *     The font and fontsize control the font used for
+ *     drawing the text digits below each symbol.
  *
  * TODO:
  *   Add EAN-13 support
@@ -103,7 +105,7 @@ module upc_symbol(symbol, bar=1, space=0, parity=true, reverse=false)
 }
 
 /*
- * upc_symbol - render a single symbol
+ * UPC_A - Generate a UPC-A barcode
  *
  * string - UPC digit string to encode
  *   string of digits (only) of length 12
@@ -111,6 +113,10 @@ module upc_symbol(symbol, bar=1, space=0, parity=true, reverse=false)
  * bar - bar representation
  * space - space representation
  * (see documentation in bitmap.scad)
+ *
+ * font - font to use for decimal digits below each symbol
+ *   set to undef if you do not want any text
+ * fontsize - font size to use
  */
 module UPC_A(string, bar=1, space=0,
 	font="Liberation Mono:style=Bold", fontsize=1.5)
