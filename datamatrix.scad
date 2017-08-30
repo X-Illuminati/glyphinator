@@ -1,4 +1,4 @@
-/********************************************************
+/*****************************************************************************
  * Data Matrix Symbol Library
  * Generates Data Matrix 2D barcodes
  *****************************************************************************
@@ -19,7 +19,10 @@
  *****************************************************************************
  * Usage:
  * Include this file with the "use" tag.
- * Depends on bitmap.scad library.
+ *
+ * Library Dependencies:
+ * - util/bitlib.scad
+ * - util/bitmap.scad
  *
  * API:
  *   data_matrix(bytes, size, corner, mark, space)
@@ -49,7 +52,8 @@
  *
  * TODO: lots
  *
- ********************************************************/
+ *****************************************************************************/
+use <util/bitlib.scad>
 use <util/bitmap.scad>
 
 /* Some definitions of useful data bytes that can be
@@ -60,8 +64,6 @@ function byte_mode() = 231; // begin base-256 (byte) encoding mode
 function text_mode() = 239; // begin text encoding mode
 function ascii_mode() = 254; // return to ASCII encoding mode
 function unused() = 0; // 0 is explicitly not used as a control code
-
-function bit(n,b) = (floor(n / pow(2, b)) % 2)?true:false;
 
 /*
  * dm_codeword - generate a single codeword as a 2D array
