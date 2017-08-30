@@ -47,7 +47,9 @@
  *****************************************************************************/
 
 //Return the truth value of the b'th bit of v
-function bit(v,b) = (floor(v / pow(2, b)) % 2)?true:false;
+function bit(v,b) =
+	((v==undef)||(b==undef)||(b<0))?undef:
+	(floor(v / pow(2, b)) % 2)?true:false;
 
 echo("*** bit() testcases ***");
 echo(0,bit(0,0)==false);
@@ -68,12 +70,16 @@ echo(13,[for (i=[65:127]) bit(pow(2,64),i)]==[for (i=[1:63]) false]);
 //-(2^64)=1...1 0...0
 echo(14,[for (i=[0:63]) bit(-pow(2,64),i)]==[for (i=[0:63]) false]);
 echo(15,[for (i=[64:127]) bit(-pow(2,64),i)]==[for (i=[0:63]) true]);
+echo(16,bit(10,-1)==undef);
+echo(17,bit(10,undef)==undef);
+echo(18,bit(undef,3)==undef);
 
 //return true if v can be represented in b bits
 //if signed flag is set. the result will be adjusted
 //to account for the needed sign bit
 function check_bit_size(v,b,signed=false) =
 	(b<0)?undef:
+	(v==undef)?undef:
 	(b==0)?false:
 	(v==0)?true: //(b>0)
 	(signed)?
@@ -109,10 +115,13 @@ echo(22,check_bit_size(-3,2,signed=true)==false);
 echo(23,check_bit_size(-3,3,signed=true)==true);
 echo(24,check_bit_size(-8,3,signed=true)==false);
 echo(25,check_bit_size(-8,4,signed=true)==true);
+echo(26,check_bit_size(undef,4)==undef);
+echo(27,check_bit_size(undef,4,signed=true)==undef);
 
 //return the value of a xor b
 //runs recursively until all bits of a and b are exhausted
 function xor(a,b,i=0) =
+	((a==undef)||(b==undef))?undef:
 	let (c=bit(a,i), d=bit(b,i),
 		 v=((c||d) && !(c&&d))?pow(2,i):0)
 		(check_bit_size(a,i,signed=true) &&
@@ -131,3 +140,4 @@ echo(6,xor(-8,-10)==14); //11000^10110=01110=14
 echo(7,xor(-7,-10)==15); //11001^10110=01111=15
 echo(8,xor(9,-10)==-1); //01001^10110=11111=-1
 echo(9,xor(9,-12)==-3); //01001^10100=11101=-3
+echo(10,xor(undef,0)==undef);
