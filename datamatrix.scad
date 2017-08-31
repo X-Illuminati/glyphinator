@@ -255,14 +255,18 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 	}
 
 	//x-adjustment for split codewords (based on corner type)
-	function splitx(corner)=
-		(1==corner)?4:
-		(2==corner)?2:-2;
+	function splitx(size)=
+		(22==size.x)?4:
+		(16==size.x)?2:
+		(12==size.x)?-2:
+		0; //(size.x==10)
 
 	//y-adjustment for split codewords (based on corner type)
-	function splity(corner)=
-		(1==corner)?-4:
-		(2==corner)?-2:2;
+	function splity(size)=
+		(22==size.y)?-4:
+		(16==size.y)?-2:
+		(12==size.y)?2:
+		0; //(size.y==10)
 
 	//check whether x,y have entered the upper-right corner
 	//codeword shape (based on corner type)
@@ -274,16 +278,12 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 		false;
 
 	//generate a filler shape for unused area
-	//todo: shape adjustment
-	function unusedshape(corner, M=1, S=0)=
-		(1==corner)?undef:
-		(2==corner)?[
+	function unusedshape(size, M=1, S=0)=
+		(4==((size.x-2)*(size.y-2))%8)?
+		[
 			[M,S],
 			[S,M]
-		]:[
-			[M,S],
-			[S,M]
-		];
+		]:undef;
 
 	//draw the codeword bitmap at the given x,y
 	//coordinates
@@ -292,20 +292,20 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 	module draw_codeword(bitmap, size, corner, x, y)
 	{
 		if (x<0) {
-			if (-y+4>size.y) {
+			if ((corner) && (-y+4>size.y)) {
 				drawcorner1(bitmap, size, corner);
 				drawcorner2(bitmap, size, corner);
 			} else {
 				translate([0,y,0])
 					2dbitmap(colsplit(bitmap, x));
-				translate([size.x+x-2,y+splity(corner),0])
+				translate([size.x+x-2,y+splity(size),0])
 					2dbitmap(colsplit(bitmap, -x));
 			}
 		} else {
 			if (y+2>=0) {
 				translate([x,y,0])
 					2dbitmap(rowsplit(bitmap, y));
-				translate([x+splitx(corner),-size.y+2,0])
+				translate([x+splitx(size),-size.y+2,0])
 					2dbitmap(rowsplit(bitmap, -y));
 			} else {
 				translate([x,y,0])
@@ -328,7 +328,7 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 		// draw the codeword
 		if (bitmap==undef)
 			translate([size.x-4,-size.y+2,0])
-				2dbitmap(unusedshape(corner, mark, space));
+				2dbitmap(unusedshape(size, mark, space));
 		else
 			draw_codeword(bitmap, size, corner, x, y);
 
@@ -336,10 +336,15 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 		if (i<len(bytes)) {
 			if (direction%2) {
 				if (x<0) {
-					if (-y+4>=size.y) {
+					if (-y+2>=size.y) {
 						new_dir = direction+1;
-						new_x=x+2+1;
-						new_y=y+2-3;
+						new_x=x+5;
+						new_y=y+1;
+						data_matrix_inner(bytes, size, corner, mark, space, i+1, new_x, new_y, new_dir);
+					} else if (-y+4>=size.y) {
+						new_dir = direction+1;
+						new_x=x+3;
+						new_y=y-1;
 						data_matrix_inner(bytes, size, corner, mark, space, i+1, new_x, new_y, new_dir);
 					} else {
 						new_dir = direction+1;
@@ -406,7 +411,8 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 }
 
 /* Examples */
-data_matrix(concat(dm_ascii("17001164"), EOM(), [147,186,88,236,56,227,209]), size=[12,12], corner=0, mark="black");
+data_matrix(concat(dm_ascii("123456"),[114,25,5,88,102]), size=[10,10], corner=0, mark="black");
+//data_matrix(concat(dm_ascii("17001164"), EOM(), [147,186,88,236,56,227,209]), size=[12,12], corner=0, mark="black");
 //data_matrix(concat(dm_ascii("Wikipedia"), EOM(), [251,147,104,216,88,39,233,202,71,217,26,92,25,232]), size=[16,16], corner=2, mark="black");
 //data_matrix(concat(dm_ascii("http://www.idautomation.com"), EOM(), [150,45,64,198,150,168,121,187,207,220,110,53,82,43,31,69,26,15,7,4,101,131]), size=[22,22], corner=1, mark="black");
 //data_matrix(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a"),EOM(),[104,254,150,45,20,78,91,227,88,60,21,174,213,62,93,103,126,46,56,95,247,47,22,65]), size=[22,22], corner=1, mark="black");
