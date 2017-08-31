@@ -29,15 +29,17 @@
  *     Generates a DataMatrix symbol with contents
  *     specified by bytes.
  *     The size parameter is the dimension of the symbol.
- *     The corner paramter will depend on the overall
+ *     The corner parameter will depend on the overall
  *     size and should be automated in the future.
- *     The makr and space parameters can be used to
+ *     The mark and space parameters can be used to
  *     change the appearance of the symbol.
  *     See the bitmap library for more details.
  *
- *   dm_ascii(string)
+ *   dm_ascii(string, frob_digits=true)
  *     Returns a suitable byte array representing string,
  *     encoded in DataMatrix ASCII encoding.
+ *     Pairs of digits are normally compacted, but this can
+ *     be forcibly disabed by setting frob_digits=false.
  *     See ascii_mode() below, but ASCII is the default.
  *
  *   dm_text(string)
@@ -81,7 +83,7 @@ function dm_codeword(x, M=1, S=0) = [
 ];
 
 /*
- * ascii_to_dec - convert ascii string to decimal vector
+ * ascii_to_dec - convert ASCII string to decimal vector
  *
  * a - the ASCII string to vectorize
  */
@@ -92,18 +94,33 @@ function ascii_to_dec(a) =
 			val[i]+1
 ];
 
+//take the ASCII byte vector and convert it to
+//the DM ASCII encoding
+//compacting of digit pairs can be forcibly disabled
+function frobulate(vec, frob_digits=true, i=0) =
+	(i==len(vec))?[]: //terminate recursion
+		let(
+			inc=frob_digits?
+				(
+					//check for digit pairs
+					((vec[i]>=48)&&(vec[i]<=57) &&
+					 (vec[i+1]>=48)&&(vec[i+1]<=57))?2:1
+				):1,
+			val=(inc==2)?
+				(vec[i]-48)*10+(vec[i+1]-48)+130:
+				vec[i]+1
+		)
+		concat(val, frobulate(vec, frob_digits, i+inc));
 /*
- * dm_ascii - convert ascii string to byte vector encoded in
+ * dm_ascii - convert ASCII string to byte vector encoded in
  *   DataMatrix ASCII mode
  *
  * string - the ASCII string to encode
+ * frob_digits - whether to compact digit pairs
  */
-function dm_ascii(string) =
-[
-	for (i = [0: len(string) -1])
-		let (vec = ascii_to_dec(string))
-			vec[i]+1
-];
+function dm_ascii(string, frob_digits=true) =
+	let (vec=ascii_to_dec(string))
+	frobulate(vec,frob_digits);
 
 function ascii_to_text(a) =
 	let (
@@ -130,7 +147,7 @@ function ascii_to_c40(a) =
 	) [ for (B=bytearray, b=B) b ];
 
 /*
- * dm_text - convert ascii string to byte vector encoded in
+ * dm_text - convert ASCII string to byte vector encoded in
  *   DataMatrix text mode
  *
  * string - the ASCII string to encode
@@ -146,7 +163,7 @@ function dm_text(string) =
 		) bytepair ];
 
 /*
- * dm_c40 - convert ascii string to byte vector encoded in
+ * dm_c40 - convert ASCII string to byte vector encoded in
  *   DataMatrix C40 mode
  *
  * string - the ASCII string to encode
