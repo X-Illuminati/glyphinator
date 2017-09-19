@@ -24,11 +24,10 @@
  * API:
  *   UPC_A(string, bar, space, font, fontsize)
  *     Generates the UPC-A barcode representing string.
- *     The bar and space parameters can be used to
- *     change the appearance of the barcode.
- *     See the bitmap library for more details.
- *     The font and fontsize control the font used for
- *     drawing the text digits below each symbol.
+ *     The bar and space parameters can be used to change the appearance of
+ *     the barcode. See the bitmap library for more details.
+ *     The font and fontsize control the font used for drawing the text digits
+ *     below each symbol.
  *
  * TODO:
  *   Add EAN-13 support

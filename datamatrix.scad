@@ -26,33 +26,35 @@
  *
  * API:
  *   data_matrix(bytes, size, corner, mark, space)
- *     Generates a DataMatrix symbol with contents
- *     specified by bytes.
+ *     Generates a DataMatrix symbol with contents specified by bytes.
  *     The size parameter is the dimension of the symbol.
- *     The corner parameter will depend on the overall
- *     size and should be automated in the future.
- *     The mark and space parameters can be used to
- *     change the appearance of the symbol.
- *     See the bitmap library for more details.
+ *     The corner parameter will depend on the overall size and should be
+ *     automated in the future.
+ *     The mark and space parameters can be used to change the appearance of
+ *     the symbol. See the bitmap library for more details.
  *
  *   dm_ascii(string, frob_digits=true)
- *     Returns a suitable byte array representing string,
- *     encoded in DataMatrix ASCII encoding.
- *     Pairs of digits are normally compacted, but this can
- *     be forcibly disabed by setting frob_digits=false.
+ *     Returns a suitable byte array representing string, encoded in
+ *     DataMatrix ASCII encoding.
+ *     Pairs of digits are normally compacted, but this can be forcibly
+ *     disabed by setting frob_digits=false.
  *     See ascii_mode() below, but ASCII is the default.
  *
  *   dm_text(string)
- *     Returns a suitable byte array representing string,
- *     encoded in DataMatrix text encoding.
+ *     Returns a suitable byte array representing string, encoded in
+ *     DataMatrix text encoding.
  *     See text_mode() below.
  *
  *   dm_c40(string)
- *     Returns a suitable byte array representing string,
- *     encoded in DataMatrix C40 encoding.
+ *     Returns a suitable byte array representing string, encoded in
+ *     DataMatrix C40 encoding.
  *     See c40_mode() below.
  *
- * TODO: lots
+ * TODO:
+ *  - Add support for larger sizes (many missing)
+ *  - Add function to pad data to size
+ *  - Add call to reed-solomon library to calculate ecc bytes
+ *  - Remove need to specify corner type
  *
  *****************************************************************************/
 use <util/bitlib.scad>
@@ -416,7 +418,7 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 //data_matrix(concat(dm_ascii("123456"),[114,25,5,88,102]), size=[10,10], corner=0, mark="black");
 //data_matrix(concat(dm_ascii("17001164"), EOM(), [147,186,88,236,56,227,209]), size=[12,12], corner=0, mark="black");
 //data_matrix(concat(c40_mode(),dm_c40("H0VLP7"),[233, 64, 92, 242, 191, 149, 241]), size=[12,12], corner=0, mark="black");
-data_matrix(concat(c40_mode(),dm_c40("TELESI"),ascii_mode(),dm_ascii("S1"), [190,141,4,125,151,139,66,53,80,70]), size=[14,14], corner=1, mark="black");
+//data_matrix(concat(c40_mode(),dm_c40("TELESI"),ascii_mode(),dm_ascii("S1"), [190,141,4,125,151,139,66,53,80,70]), size=[14,14], corner=1, mark="black");
 //data_matrix(concat(dm_ascii("Wikipedia"), EOM(), [251,147,104,216,88,39,233,202,71,217,26,92,25,232]), size=[16,16], corner=2, mark="black");
 //data_matrix(concat(dm_ascii("http://www.idautomation.com"), EOM(), [150,45,64,198,150,168,121,187,207,220,110,53,82,43,31,69,26,15,7,4,101,131]), size=[22,22], corner=1, mark="black");
-//data_matrix(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a"),EOM(),[104,254,150,45,20,78,91,227,88,60,21,174,213,62,93,103,126,46,56,95,247,47,22,65]), size=[22,22], corner=1, mark="black");
+data_matrix(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a"),EOM(),[104,254,150,45,20,78,91,227,88,60,21,174,213,62,93,103,126,46,56,95,247,47,22,65]), size=[22,22], corner=1, mark="black");

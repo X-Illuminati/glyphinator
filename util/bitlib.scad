@@ -19,26 +19,25 @@
  *****************************************************************************
  * Usage:
  * Include this file with the "use" tag.
- * When run on its own, all echo statements in this
- * library should print "true".
+ * When run on its own, all echo statements in this library should print
+ * "true".
  *
  * API:
  *   bit(v,b)
  *     Return the truth value of the b'th bit of v.
  *
  *   check_bit_size(v,b,signed=false)
- *     Determine whether the value v can be represented
- *     with b bits (b must be positive).
- *     The signed flag indicates whether to include the
- *     sign bit in the determination; otherwise negative
- *     values will result in undef being returned.
+ *     Determine whether the value v can be represented with b bits (b must
+ *     be positive).
+ *     The signed flag indicates whether to include the sign bit in the
+ *     determination; otherwise negative values will result in undef being
+ *     returned.
  *
  *   xor(a,b)
  *     Return the value of a xor b.
  *     Handles arbitrary size values for a and b.
- *     Handles negative values as expected (a positive
- *     result will be returned unless a and b have
- *     differing signs).
+ *     Handles negative values as expected (a positive result will be returned
+ *     unless a and b have differing signs).
  *
  * TODO:
  *  - Change echos to asserts (future OpenSCAD version)
