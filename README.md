@@ -2,6 +2,25 @@
 OpenSCAD Barcode Generator - useful for direct part marking on 3D models  
 https://github.com/X-Illuminati/glyphinator/
 
+## Usage
+Supports UPC-A and DataMatrix (ECC200) barcodes. More to come!
+
+### UPC-A
+Include upc.scad in your model with the use command.
+See the documentation in [upc.scad](upc.scad) for more details.
+```
+use <upc.scad>
+UPC_A("01234554321");
+```
+
+### DataMatrix
+Include datamatrix.scad in your model with the use command.
+See the documentation in [datamatrix.scad](datamatrix.scad) for more details.
+```
+use <datamatrix.scad>
+data_matrix(dm_ecc(dm_pad(dm_ascii("1234"),3), 3, 5), size=[10,10], corner=0);
+```
+
 ## Software License
 Glyphinator is free software: you can redistribute it and/or modify
 it under the terms of the **GNU Lesser General Public License** as published by
