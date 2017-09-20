@@ -50,11 +50,19 @@
  *     DataMatrix C40 encoding.
  *     See c40_mode() below.
  *
+ *   dm_pad(data, data_size)
+ *     Pad the data byte vector up to data_size using the DataMatrix padding
+ *     algorithm (mod 253).
+ *     This padding algorithm includes the EOM byte if necessary.
+ *
  * TODO:
+ *  - Add support for byte mode (base 256 mode)
  *  - Add support for larger sizes (many missing)
- *  - Add function to pad data to size
  *  - Add call to reed-solomon library to calculate ecc bytes
- *  - Remove need to specify corner type
+ *  - Determine ideal data size (and ecc size) automatically from supplied
+ *    data byte vector
+ *  - Determine dimensions and corner type from ideal data size
+ *  - Add support for rectangular matrixes
  *
  *****************************************************************************/
 use <util/bitlib.scad>
@@ -179,6 +187,26 @@ function dm_c40(string) =
 			packedval=bytearray[i]*1600+bytearray[i+1]*40+bytearray[i+2]+1,
 			bytepair=[floor(packedval/256),packedval%256]
 		) bytepair ];
+
+/*
+ * dm_pad - pad a byte vector up to an expected size
+ *
+ * data - the vector of initial data bytes
+ * data_size - the expected vector size
+ *  (this value depends on the barcode dimensions)
+ *
+ * returns undef if len(data) > data_size
+ */
+function dm_pad(data, data_size) =
+	(len(data)>data_size)?undef:
+	[
+		for (i=[0:data_size-1])
+			(i==len(data))? EOM():
+			(i>len(data))?
+				let(p=((((149*(i+1))%253)+130)%254))
+					(p==0)?254:p:
+			data[i]
+	];
 
 /*
  * data_matrix - Generate a DataMatrix barcode
@@ -415,10 +443,24 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 }
 
 /* Examples */
+
+/* 10x10 - 3 data bytes, 5 ecc bytes */
 //data_matrix(concat(dm_ascii("123456"),[114,25,5,88,102]), size=[10,10], corner=0, mark="black");
-//data_matrix(concat(dm_ascii("17001164"), EOM(), [147,186,88,236,56,227,209]), size=[12,12], corner=0, mark="black");
+/* same as above but with dm_pad(), which is redundant in this case */
+//data_matrix(concat(dm_pad(dm_ascii("123456"),3),[114,25,5,88,102]), size=[10,10], corner=0, mark="black");
+
+/* 12x12 - 5 data bytes, 7 ecc bytes */
+//data_matrix(concat(dm_pad(dm_ascii("17001164"),5), [147,186,88,236,56,227,209]), size=[12,12], corner=0, mark="black");
 //data_matrix(concat(c40_mode(),dm_c40("H0VLP7"),[233, 64, 92, 242, 191, 149, 241]), size=[12,12], corner=0, mark="black");
+
+/* 14x14 - 8 data bytes, 10 ecc bytes */
 //data_matrix(concat(c40_mode(),dm_c40("TELESI"),ascii_mode(),dm_ascii("S1"), [190,141,4,125,151,139,66,53,80,70]), size=[14,14], corner=1, mark="black");
-//data_matrix(concat(dm_ascii("Wikipedia"), EOM(), [251,147,104,216,88,39,233,202,71,217,26,92,25,232]), size=[16,16], corner=2, mark="black");
-//data_matrix(concat(dm_ascii("http://www.idautomation.com"), EOM(), [150,45,64,198,150,168,121,187,207,220,110,53,82,43,31,69,26,15,7,4,101,131]), size=[22,22], corner=1, mark="black");
-data_matrix(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a"),EOM(),[104,254,150,45,20,78,91,227,88,60,21,174,213,62,93,103,126,46,56,95,247,47,22,65]), size=[22,22], corner=1, mark="black");
+
+/* 16x16 - 12 data bytes, 12 ecc bytes */
+//data_matrix(concat(dm_pad(dm_ascii("Wikipedia"),12), [104,216,88,39,233,202,71,217,26,92,25,232]), size=[16,16], corner=2, mark="black");
+
+/* 22x22 - 30 data bytes, 20 ecc bytes */
+//data_matrix(concat(dm_pad(dm_ascii("http://www.idautomation.com"),30), [64,198,150,168,121,187,207,220,110,53,82,43,31,69,26,15,7,4,101,131]), size=[22,22], corner=1, mark="black");
+data_matrix(concat(dm_pad(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a")),30),[20,78,91,227,88,60,21,174,213,62,93,103,126,46,56,95,247,47,22,65]), size=[22,22], corner=1, mark="black");
+/* same as above but using manual padding instead of dm_pad() */
+//data_matrix(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a"),EOM(),[104,254,150,45,20,78,91,227,88,60,21,174,213,62,93,103,126,46,56,95,247,47,22,65]), size=[22,22], corner=1, mark="black");
