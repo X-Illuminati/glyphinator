@@ -24,7 +24,7 @@
  * "true".
  *
  * API:
- *   ecc(data, data_size, ecc_size)
+ *   rs_ecc(data, data_size, ecc_size)
  *     Generate a vector of ecc_size bytes over data (which is vector of byte
  *     values with length data_size). Calculation is performed using
  *     Reed-Solomon error correction on GF(2^8) with polynomial 301.
@@ -39,7 +39,7 @@
 use <bitlib.scad>
 
 // calculate Galois-field log function on n
-function logg(n)=
+function rs_galois_log(n)=
 	let (galois_log_table=[
 		-255, 255,   1, 240,   2, 225, 241,  53,   3,  38, 226, 133, 242,  43,  54, 210,
 		   4, 195,  39, 114, 227, 106, 134,  28, 243, 140,  44,  23,  55, 118, 211, 234,
@@ -60,7 +60,7 @@ function logg(n)=
 		galois_log_table[n];
 
 // calculate Galois-field anti-log function on n
-function alogg(n)=
+function rs_galois_alog(n)=
 	let (galois_antilog_table=[
 		  1,   2,   4,   8,  16,  32,  64, 128,  45,  90, 180,  69, 138,  57, 114, 228,
 		229, 231, 227, 235, 251, 219, 155,  27,  54, 108, 216, 157,  23,  46,  92, 184,
@@ -82,9 +82,10 @@ function alogg(n)=
 
 // perform Galois-field multiplication of a*b
 // using the Galois log and anti-log functions above
-function multg(a,b)= alogg((logg(a)+logg(b)) % 255);
+function rs_multg(a,b) =
+	rs_galois_alog((rs_galois_log(a)+rs_galois_log(b)) % 255);
 
-function factor_table(s) =
+function rs_factor_table(s) =
 	// Factor table for 5 ecc bytes
 	(s==5)?[228,48,15,111,62]:
 	// Factor table for 7 ecc bytes
@@ -115,29 +116,29 @@ for i in range(data_size):
 		if ((j+1)<ecc_size):
 			ecc[j]=ecc[j+1]^ecc[j]
 */
-function ecc(data,data_size,ecc_size,pass=0)=
-	let (f=factor_table(ecc_size))
+function rs_ecc(data,data_size,ecc_size,pass=0)=
+	let (f=rs_factor_table(ecc_size))
 		(f==undef)?undef:
 		(len(data)!=data_size)?undef:
 		[
 			let (
 				ecc_state=(pass==data_size-1)?
 					[for (j=[1:ecc_size]) 0]:
-					ecc(data,data_size,ecc_size,pass+1),
+					rs_ecc(data,data_size,ecc_size,pass+1),
 				t=xor(data[data_size-1-pass],ecc_state[0])
 			)
 			for (i=[0:1:ecc_size-1])
-				let (t2=(t==0)?0:multg(t,f[ecc_size-i-1]))
+				let (t2=(t==0)?0:rs_multg(t,f[ecc_size-i-1]))
 					(i==ecc_size-1)?t2:xor(ecc_state[i+1],t2)
 		];
 
-echo("*** ecc() testcases ***");
+echo("*** rs_ecc() testcases ***");
 
 /* invalid size=4 */
-echo(ecc([10,20,30],3,4)==undef);
+echo(rs_ecc([10,20,30],3,4)==undef);
 
 /* invalid data too short */
-echo(ecc([10,20],3,5)==undef);
+echo(rs_ecc([10,20],3,5)==undef);
 
 /*
 10x10
@@ -146,7 +147,7 @@ ecc size: 5
 data: [142,164,186] //ascii 123456
 ecc: [114,25,5,88,102]
 */
-echo(ecc([142,164,186],3,5)==[114,25,5,88,102]);
+echo(rs_ecc([142,164,186],3,5)==[114,25,5,88,102]);
 
 /*
 12x12
@@ -157,8 +158,8 @@ ecc: [147,186,88,236,56,227,209]
 data: [230,132,4,160,212] //c40 H0VLP7
 ecc: [233,64,92,242,191,149,241]
 */
-echo(ecc([147,130,141,194,129],5,7)==[147,186,88,236,56,227,209]);
-echo(ecc([230,132,4,160,212],5,7)==[233,64,92,242,191,149,241]);
+echo(rs_ecc([147,130,141,194,129],5,7)==[147,186,88,236,56,227,209]);
+echo(rs_ecc([230,132,4,160,212],5,7)==[233,64,92,242,191,149,241]);
 
 /*
 14x14
@@ -167,7 +168,7 @@ ecc size: 10
 data: [230,209,42,117,151,254,84,50] //c40 TELESIS1
 ecc: [190,141,4,125,151,139,66,53,80,70]
 */
-echo(ecc([230,209,42,117,151,254,84,50],8,10)
+echo(rs_ecc([230,209,42,117,151,254,84,50],8,10)
 	==[190,141,4,125,151,139,66,53,80,70]);
 
 /*
@@ -177,7 +178,7 @@ ecc size: 12
 data: [88,106,108,106,113,102,101,106,98,129,251,147] //ascii Wikipedia + pad x3
 ecc: [104,216,88,39,233,202,71,217,26,92,25,232]
 */
-echo(ecc([88,106,108,106,113,102,101,106,98,129,251,147],12,12)
+echo(rs_ecc([88,106,108,106,113,102,101,106,98,129,251,147],12,12)
 	==[104,216,88,39,233,202,71,217,26,92,25,232]);
 
 /*
@@ -191,9 +192,9 @@ ecc: [64,198,150,168,121,187,207,220,110,53,82,43,31,69,26,15,7,4,101,131]
 data: [239,16,47,153,142,115,63,87,180,23,254,113,12,196,163,21,172,106,1,160,190,115,63,254,98,129,104,254,150,45]
 ecc: [20,78,91,227,88,60,21,174,213,62,93,103,126,46,56,95,247,47,22,65]
 */
-echo(ecc([105,117,117,113,59,48,48,120,120,120,47,106,101,98,118,117,112,110,98,117,106,112,111,47,100,112,110,129,150,45],
+echo(rs_ecc([105,117,117,113,59,48,48,120,120,120,47,106,101,98,118,117,112,110,98,117,106,112,111,47,100,112,110,129,150,45],
 	30, 20)==
 	[64,198,150,168,121,187,207,220,110,53,82,43,31,69,26,15,7,4,101,131]);
-echo(ecc([239,16,47,153,142,115,63,87,180,23,254,113,12,196,163,21,172,106,1,160,190,115,63,254,98,129,104,254,150,45],
+echo(rs_ecc([239,16,47,153,142,115,63,87,180,23,254,113,12,196,163,21,172,106,1,160,190,115,63,254,98,129,104,254,150,45],
 	30, 20)==
 	[20,78,91,227,88,60,21,174,213,62,93,103,126,46,56,95,247,47,22,65]);
