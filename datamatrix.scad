@@ -23,6 +23,7 @@
  * Library Dependencies:
  * - util/bitlib.scad
  * - util/bitmap.scad
+ * - util/reed-solomon.scad
  *
  * API:
  *   data_matrix(bytes, size, corner, mark, space)
@@ -55,10 +56,15 @@
  *     algorithm (mod 253).
  *     This padding algorithm includes the EOM byte if necessary.
  *
+ *   dm_ecc(data,data_size,ecc_size)
+ *     Calculate DataMatrix ECC200 error correction bytes over data.
+ *     The data vector must have a length of data_size.
+ *     The result of this function will be a vector that includes data
+ *     followed by ecc_size error correction bytes.
+ *
  * TODO:
  *  - Add support for byte mode (base 256 mode)
  *  - Add support for larger sizes (many missing)
- *  - Add call to reed-solomon library to calculate ecc bytes
  *  - Determine ideal data size (and ecc size) automatically from supplied
  *    data byte vector
  *  - Determine dimensions and corner type from ideal data size
@@ -67,6 +73,7 @@
  *****************************************************************************/
 use <util/bitlib.scad>
 use <util/bitmap.scad>
+use <util/reed-solomon.scad>
 
 /* Some definitions of useful data bytes that can be
    concatenated into your byte string */
@@ -207,6 +214,16 @@ function dm_pad(data, data_size) =
 					(p==0)?254:p:
 			data[i]
 	];
+
+/*
+ * dm_ecc - append DataMatrix ECC200 error correction bytes
+ *
+ * data - the vector of data bytes
+ * data_size - the data length for the particular matrix size
+ * ecc_size - the ecc length for the particular matrix size
+ */
+function dm_ecc(data,data_size,ecc_size) =
+	concat(data,rs_ecc(data,data_size,ecc_size));
 
 /*
  * data_matrix - Generate a DataMatrix barcode
@@ -445,22 +462,24 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 /* Examples */
 
 /* 10x10 - 3 data bytes, 5 ecc bytes */
-//data_matrix(concat(dm_ascii("123456"),[114,25,5,88,102]), size=[10,10], corner=0, mark="black");
+//data_matrix(dm_ecc(dm_ascii("123456"), 3, 5), size=[10,10], corner=0, mark="black");
 /* same as above but with dm_pad(), which is redundant in this case */
-//data_matrix(concat(dm_pad(dm_ascii("123456"),3),[114,25,5,88,102]), size=[10,10], corner=0, mark="black");
+//data_matrix(dm_ecc(dm_pad(dm_ascii("123456"),3), 3, 5), size=[10,10], corner=0, mark="black");
+/* same as above but with manual ecc bytes instead of dm_ecc() */
+//data_matrix(concat(dm_ascii("123456"),[114,25,5,88,102]), size=[10,10], corner=0, mark="black");
 
 /* 12x12 - 5 data bytes, 7 ecc bytes */
-//data_matrix(concat(dm_pad(dm_ascii("17001164"),5), [147,186,88,236,56,227,209]), size=[12,12], corner=0, mark="black");
-//data_matrix(concat(c40_mode(),dm_c40("H0VLP7"),[233, 64, 92, 242, 191, 149, 241]), size=[12,12], corner=0, mark="black");
+//data_matrix(dm_ecc(dm_pad(dm_ascii("17001164"),5), 5, 7), size=[12,12], corner=0, mark="black");
+//data_matrix(dm_ecc(concat(c40_mode(),dm_c40("H0VLP7")), 5, 7), size=[12,12], corner=0, mark="black");
 
 /* 14x14 - 8 data bytes, 10 ecc bytes */
-//data_matrix(concat(c40_mode(),dm_c40("TELESI"),ascii_mode(),dm_ascii("S1"), [190,141,4,125,151,139,66,53,80,70]), size=[14,14], corner=1, mark="black");
+//data_matrix(dm_ecc(concat(c40_mode(),dm_c40("TELESI"),ascii_mode(),dm_ascii("S1")), 8, 10), size=[14,14], corner=1, mark="black");
 
 /* 16x16 - 12 data bytes, 12 ecc bytes */
-//data_matrix(concat(dm_pad(dm_ascii("Wikipedia"),12), [104,216,88,39,233,202,71,217,26,92,25,232]), size=[16,16], corner=2, mark="black");
+//data_matrix(dm_ecc(dm_pad(dm_ascii("Wikipedia"),12), 12, 12), size=[16,16], corner=2, mark="black");
 
 /* 22x22 - 30 data bytes, 20 ecc bytes */
-//data_matrix(concat(dm_pad(dm_ascii("http://www.idautomation.com"),30), [64,198,150,168,121,187,207,220,110,53,82,43,31,69,26,15,7,4,101,131]), size=[22,22], corner=1, mark="black");
-data_matrix(concat(dm_pad(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a")),30),[20,78,91,227,88,60,21,174,213,62,93,103,126,46,56,95,247,47,22,65]), size=[22,22], corner=1, mark="black");
-/* same as above but using manual padding instead of dm_pad() */
+//data_matrix(dm_ecc(dm_pad(dm_ascii("http://www.idautomation.com"),30), 30, 20), size=[22,22], corner=1, mark="black");
+data_matrix(dm_ecc(dm_pad(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a")),30), 30, 20), size=[22,22], corner=1, mark="black");
+/* same as above but using manual padding and ecc */
 //data_matrix(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a"),EOM(),[104,254,150,45,20,78,91,227,88,60,21,174,213,62,93,103,126,46,56,95,247,47,22,65]), size=[22,22], corner=1, mark="black");
