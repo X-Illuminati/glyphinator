@@ -85,16 +85,14 @@ function rs_galois_alog(n)=
 function rs_multg(a,b) =
 	rs_galois_alog((rs_galois_log(a)+rs_galois_log(b)) % 255);
 
+// factor tables for GF(2^8) poly 301
+// s, the number of ecc bytes serves as a key to retrieve the correct table
 function rs_factor_table(s) =
-	// Factor table for 5 ecc bytes
-	(s==5)?[228,48,15,111,62]:
-	// Factor table for 7 ecc bytes
-	(s==7)?[23,68,144,134,240,92,254]:
-	// Factor table for 10 ecc bytes
+	(s==5)?[228,48,15,111,62]: // Factor table for 5 ecc bytes
+	(s==7)?[23,68,144,134,240,92,254]: // Factor table for 7 ecc bytes
 	(s==10)?[28,24,185,166,223,248,116,255,110,61]:
-	// Factor table for 12 ecc bytes
 	(s==12)?[41,153,158,91,61,42,142,213,97,178,100,242]:
-	// Factor table for 20 ecc bytes
+	(s==14)?[156,97,192,252,95,9,157,119,138,45,18,186,83,185]:
 	(s==20)?[15,195,244,9,233,71,168,2,188,160,153,145,253,79,108,82,27,174,186,172]:
 	undef;
 
@@ -180,6 +178,16 @@ ecc: [104,216,88,39,233,202,71,217,26,92,25,232]
 */
 echo(rs_ecc([88,106,108,106,113,102,101,106,98,129,251,147],12,12)
 	==[104,216,88,39,233,202,71,217,26,92,25,232]);
+
+/*
+18x18
+data size: 18
+ecc size: 14
+data: [73,112,118,115,102,123,33,75,112,111,98,117,105,98,111,129,133,28] //ascii Hourez Jonathan + pad x3
+ecc: [164,206,164,35,253,4,255,108,55,191,66,252,19,49]
+*/
+echo(rs_ecc([73,112,118,115,102,123,33,75,112,111,98,117,105,98,111,129,133,28],18,14)
+	==[164,206,164,35,253,4,255,108,55,191,66,252,19,49]);
 
 /*
 22x22

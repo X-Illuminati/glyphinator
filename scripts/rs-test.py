@@ -51,7 +51,7 @@ data=bytearray((147,130,141,194))
 data_size=5
 ecc_size=7
 
-##14x14 example -8 data, 10 ecc
+##14x14 example - 8 data, 10 ecc
 data=bytearray((230, 209, 42, 117, 151, 254, 84, 50))
 data_size=8
 ecc_size=10
@@ -62,20 +62,27 @@ for i in range(len(data)): data[i]=data[i]+1
 data_size=12
 ecc_size=12
 
-##22x22 example - 30 data, 20 ecc:
-data=bytearray("http://www.idautomation.com", encoding="ascii")
+##18x18 example - 18 data, 14 ecc
+data=bytearray("Hourez Jonathan", encoding="ascii")
 for i in range(len(data)): data[i]=data[i]+1
-data_size=30
-ecc_size=20
+data_size=18
+ecc_size=14
 
-#these are computed factors for the generator polynomial
+##22x22 example - 30 data, 20 ecc:
+#data=bytearray("http://www.idautomation.com", encoding="ascii")
+#for i in range(len(data)): data[i]=data[i]+1
+#data_size=30
+#ecc_size=20
+
+#these are computed factor table for GF(2^8) poly 301
+#the key is the number of ecc bytes
 factor_tables={
-#these test OK
 5:bytes((228,48,15,111,62)), # Factor table for 5 ecc bytes
 7:bytes((23,68,144,134,240,92,254)), # Factor table for 7 ecc bytes
-10:bytes((28,24,185,166,223,248,116,255,110,61)), # Factor table for 10 ecc bytes
-12:bytes((41,153,158,91,61,42,142,213,97,178,100,242)), # Factor table for 12 ecc bytes
-20:bytes((15,195,244,9,233,71,168,2,188,160,153,145,253,79,108,82,27,174,186,172)), # Factor table for 20 ecc bytes
+10:bytes((28,24,185,166,223,248,116,255,110,61)),
+12:bytes((41,153,158,91,61,42,142,213,97,178,100,242)),
+14:bytes((156,97,192,252,95,9,157,119,138,45,18,186,83,185)),
+20:bytes((15,195,244,9,233,71,168,2,188,160,153,145,253,79,108,82,27,174,186,172)),
 }
 
 print("data bytes:", end=" ");print(binascii.b2a_hex(data))
@@ -140,7 +147,7 @@ def factor_table(ecc_size):
 		print("**generator factors: ", end=" ");
 		print(binascii.b2a_hex(factors))
 		print("**decimal:", end=" ")
-		for i in factors: print(i,end=" ")
+		for i in factors: print(i,end=",")
 		print()
 		return factors
 

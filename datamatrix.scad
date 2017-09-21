@@ -365,18 +365,22 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 	//x-adjustment for split codewords (based on corner type)
 	function splitx(size)=
 		(22==size.x)?4:
+		(18==size.x)?0:
 		(16==size.x)?2:
 		(14==size.x)?4:
 		(12==size.x)?-2:
-		0; //(size.x==10)
+		(10==size.x)?0:
+		0;
 
 	//y-adjustment for split codewords (based on corner type)
 	function splity(size)=
 		(22==size.y)?-4:
+		(18==size.x)?0:
 		(16==size.y)?-2:
 		(14==size.y)?-4:
 		(12==size.y)?2:
-		0; //(size.y==10)
+		(10==size.y)?0:
+		0;
 
 	//check whether x,y have entered the upper-right corner
 	//codeword shape (based on corner type)
@@ -538,6 +542,9 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 
 /* 16x16 - 12 data bytes, 12 ecc bytes */
 //data_matrix(dm_ecc(dm_pad(dm_ascii("Wikipedia"),12), 12, 12), size=[16,16], corner=2, mark="black");
+
+/* 18x18 - 18 data bytes, 14 ecc bytes */
+//data_matrix(dm_ecc(dm_pad(dm_ascii("Hourez Jonathan"),18),18,14), size=[18,18], corner=0, mark="black");
 
 /* 22x22 - 30 data bytes, 20 ecc bytes */
 //data_matrix(dm_ecc(dm_pad(dm_ascii("http://www.idautomation.com"),30), 30, 20), size=[22,22], corner=1, mark="black");
