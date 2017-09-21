@@ -96,6 +96,7 @@ use <util/reed-solomon.scad>
 function EOM() = 129; // end-of-message (first padding byte)
 function c40_mode() = 230; // begin C40 encoding mode
 function base256_mode() = 231; // begin base-256 (byte) encoding mode
+function fnc1_mode() = 232; // begin FNC1 (GS1-DataMatrix) encoding mode
 function text_mode() = 239; // begin text encoding mode
 function ascii_mode() = 254; // return to ASCII encoding mode
 function unused() = 0; // 0 is explicitly not used as a control code
@@ -365,6 +366,7 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 	//x-adjustment for split codewords (based on corner type)
 	function splitx(size)=
 		(22==size.x)?4:
+		(20==size.x)?-2:
 		(18==size.x)?0:
 		(16==size.x)?2:
 		(14==size.x)?4:
@@ -375,7 +377,8 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 	//y-adjustment for split codewords (based on corner type)
 	function splity(size)=
 		(22==size.y)?-4:
-		(18==size.x)?0:
+		(20==size.y)?2:
+		(18==size.y)?0:
 		(16==size.y)?-2:
 		(14==size.y)?-4:
 		(12==size.y)?2:
@@ -545,6 +548,9 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 
 /* 18x18 - 18 data bytes, 14 ecc bytes */
 //data_matrix(dm_ecc(dm_pad(dm_ascii("Hourez Jonathan"),18),18,14), size=[18,18], corner=0, mark="black");
+
+/* 20x20 - 22 data bytes, 18 ecc bytes */
+//data_matrix(dm_ecc(dm_pad(concat([fnc1_mode()],dm_ascii("01034531200000111709112510ABCD1234")),22),22,18), size=[20,20], corner=0, mark="black");
 
 /* 22x22 - 30 data bytes, 20 ecc bytes */
 //data_matrix(dm_ecc(dm_pad(dm_ascii("http://www.idautomation.com"),30), 30, 20), size=[22,22], corner=1, mark="black");
