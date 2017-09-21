@@ -51,24 +51,40 @@
  *     DataMatrix C40 encoding.
  *     See c40_mode() below.
  *
+ *   dm_base256(data, pos, fills_symbol=false)
+ *     Encode the data byte vector using DataMatrix base-256 encoding
+ *     algorithm (mod 255). A 1 or 2 byte length prefix is prepended to the
+ *     data automatically.
+ *     The nature of the algorithm means that it needs pos to be the starting
+ *     byte position of the data bytes within the overall symbol data field.
+ *     See also helper function dm_base256_append().
+ *     The fills_symbol flag can be used by experts.
+ *     See base256_mode() below.
+ *
+ *   dm_base256_append(preceding_data, byte_data, fills_symbol=false)
+ *     Helper function to append dm_base256(byte_data, _pos_) to
+ *     preceding_data, where _pos_ is determined automatically.
+ *     The final byte of preceding_data must be 'base256_mode()'.
+ *     The fills_symbol flag can be used by experts.
+ *
  *   dm_pad(data, data_size)
  *     Pad the data byte vector up to data_size using the DataMatrix padding
  *     algorithm (mod 253).
  *     This padding algorithm includes the EOM byte if necessary.
  *
- *   dm_ecc(data,data_size,ecc_size)
+ *   dm_ecc(data, data_size, ecc_size)
  *     Calculate DataMatrix ECC200 error correction bytes over data.
  *     The data vector must have a length of data_size.
  *     The result of this function will be a vector that includes data
  *     followed by ecc_size error correction bytes.
  *
  * TODO:
- *  - Add support for byte mode (base 256 mode)
  *  - Add support for larger sizes (many missing)
  *  - Determine ideal data size (and ecc size) automatically from supplied
  *    data byte vector
  *  - Determine dimensions and corner type from ideal data size
  *  - Add support for rectangular matrixes
+ *  - Add other encoding modes (low priority)
  *
  *****************************************************************************/
 use <util/bitlib.scad>
@@ -79,7 +95,7 @@ use <util/reed-solomon.scad>
    concatenated into your byte string */
 function EOM() = 129; // end-of-message (first padding byte)
 function c40_mode() = 230; // begin C40 encoding mode
-function byte_mode() = 231; // begin base-256 (byte) encoding mode
+function base256_mode() = 231; // begin base-256 (byte) encoding mode
 function text_mode() = 239; // begin text encoding mode
 function ascii_mode() = 254; // return to ASCII encoding mode
 function unused() = 0; // 0 is explicitly not used as a control code
@@ -194,6 +210,51 @@ function dm_c40(string) =
 			packedval=bytearray[i]*1600+bytearray[i+1]*40+bytearray[i+2]+1,
 			bytepair=[floor(packedval/256),packedval%256]
 		) bytepair ];
+
+/*
+ * dm_base256 - encode byte vector in DataMatrix base-256 mode
+ *
+ * data - the byte data to encode
+ * pos - the starting byte position of the data within the
+ *   overall symbol data field
+ *   note: at least base256_mode()=231 will precede the byte
+ *   data so this value can not be 0
+ *   see also: dm_base256_append()
+ * fills_symbol - indicates that the data vector fills out
+ *   the remainder of the symbol by itself -- this attribute
+ *   is a little bit awkward and I'm not sure that it is
+ *   really necessary; so, if in doubt, leave it false
+ */
+function dm_base256(data, pos=1, fills_symbol=false) =
+	let(l = len(data))
+		(l==0)?undef:
+		let(prefix =
+			(fills_symbol)?[0]:
+			(l<250)?[l]:
+			[249+floor(l/250),l%250],
+			message=concat(prefix,data)
+		)
+		[
+			for (i=[0:len(message)-1])
+				((((149*(i+pos+1))%255)+1+message[i])%256)
+		];
+
+/*
+ * dm_base256_append - encode byte vector in DataMatrix
+ *	 base-256 mode and append it to some existing data
+ *
+ * preceding_data - the pre-existing data to append this to
+ *   note: must end with base256_mode()=231
+ * byte_data - the byte data to encode
+ * fills_symbol - indicates that the data vector fills out
+ *   the remainder of the symbol by itself -- this attribute
+ *   is a little bit awkward and I'm not sure that it is
+ *   really necessary; so, if in doubt, leave it false
+ */
+function dm_base256_append(preceding_data, byte_data, fills_symbol=false) =
+	let (l = len(preceding_data))
+		(preceding_data[l-1]!=base256_mode())?undef:
+		concat(preceding_data, dm_base256(byte_data, l, fills_symbol));
 
 /*
  * dm_pad - pad a byte vector up to an expected size
@@ -483,3 +544,6 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 data_matrix(dm_ecc(dm_pad(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a")),30), 30, 20), size=[22,22], corner=1, mark="black");
 /* same as above but using manual padding and ecc */
 //data_matrix(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a"),EOM(),[104,254,150,45,20,78,91,227,88,60,21,174,213,62,93,103,126,46,56,95,247,47,22,65]), size=[22,22], corner=1, mark="black");
+
+/* base-256 mode example: data is 63=0x3F='?' */
+//data_matrix(dm_ecc(dm_base256_append([base256_mode()],[63],fills_symbol=true), 3, 5), size=[10,10], corner=0, mark="black");
