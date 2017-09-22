@@ -86,6 +86,12 @@ for i in range(len(data)): data[i]=data[i]+1
 data_size=36
 ecc_size=24
 
+##26x26 example - 44 data, 28 ecc
+data=bytearray("http://semapedia.org/v/Mixer_(consolle)/it", encoding="ascii")
+for i in range(len(data)): data[i]=data[i]+1
+data_size=44
+ecc_size=28
+
 #these are computed factor table for GF(2^8) poly 301
 #the key is the number of ecc bytes
 factor_tables={
@@ -97,6 +103,7 @@ factor_tables={
 18:bytes((83,195,100,39,188,75,66,61,241,213,109,129,94,254,225,48,90,188)),
 20:bytes((15,195,244,9,233,71,168,2,188,160,153,145,253,79,108,82,27,174,186,172)),
 24:bytes((52,190,88,205,109,39,176,21,155,197,251,223,155,21,5,172,254,124,12,181,184,96,50,193)),
+28:bytes((211,231,43,97,71,96,103,174,37,151,170,53,75,34,249,121,17,138,110,213,141,136,120,151,233,168,93,255)),
 }
 
 print("data bytes:", end=" ");print(binascii.b2a_hex(data))

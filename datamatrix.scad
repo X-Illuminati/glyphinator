@@ -79,7 +79,6 @@
  *     followed by ecc_size error correction bytes.
  *
  * TODO:
- *  - Add support for 26x26
  *  - Determine ideal data size (and ecc size) automatically from supplied
  *    data byte vector
  *  - Determine dimensions and corner type from ideal data size
@@ -367,6 +366,7 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 
 	//x-adjustment for split codewords (based on corner type)
 	function splitx(size)=
+		(26==size.x)?0:
 		(24==size.x)?2:
 		(22==size.x)?4:
 		(20==size.x)?-2:
@@ -379,6 +379,7 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 
 	//y-adjustment for split codewords (based on corner type)
 	function splity(size)=
+		(26==size.y)?0:
 		(24==size.y)?-2:
 		(22==size.y)?-4:
 		(20==size.y)?2:
@@ -564,6 +565,9 @@ data_matrix(dm_ecc(dm_pad(concat(text_mode(),dm_text("Wikipedia, the free encycl
 
 /* 24x24 - 36 data bytes, 24 ecc bytes */
 //data_matrix(dm_ecc(dm_ascii("http://de.wikiquote.org/wiki/Zukunft"),36,24), size=[24,24], corner=2, mark="black");
+
+/* 26x26 - 44 data bytes, 28 ecc bytes */
+//data_matrix(dm_ecc(dm_pad(dm_ascii("http://semapedia.org/v/Mixer_(consolle)/it"),44),44,28), size=[26,26], corner=0, mark="black");
 
 /* base-256 mode example: data is 63=0x3F='?' */
 //data_matrix(dm_ecc(dm_base256_append([base256_mode()],[63],fills_symbol=true), 3, 5), size=[10,10], corner=0, mark="black");
