@@ -75,10 +75,16 @@ data_size=22
 ecc_size=18
 
 ##22x22 example - 30 data, 20 ecc:
-#data=bytearray("http://www.idautomation.com", encoding="ascii")
-#for i in range(len(data)): data[i]=data[i]+1
-#data_size=30
-#ecc_size=20
+data=bytearray("http://www.idautomation.com", encoding="ascii")
+for i in range(len(data)): data[i]=data[i]+1
+data_size=30
+ecc_size=20
+
+##24x24 example - 36 data, 24 ecc
+data=bytearray("http://de.wikiquote.org/wiki/Zukunft", encoding="ascii")
+for i in range(len(data)): data[i]=data[i]+1
+data_size=36
+ecc_size=24
 
 #these are computed factor table for GF(2^8) poly 301
 #the key is the number of ecc bytes
@@ -90,6 +96,7 @@ factor_tables={
 14:bytes((156,97,192,252,95,9,157,119,138,45,18,186,83,185)),
 18:bytes((83,195,100,39,188,75,66,61,241,213,109,129,94,254,225,48,90,188)),
 20:bytes((15,195,244,9,233,71,168,2,188,160,153,145,253,79,108,82,27,174,186,172)),
+24:bytes((52,190,88,205,109,39,176,21,155,197,251,223,155,21,5,172,254,124,12,181,184,96,50,193)),
 }
 
 print("data bytes:", end=" ");print(binascii.b2a_hex(data))

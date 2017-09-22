@@ -79,12 +79,14 @@
  *     followed by ecc_size error correction bytes.
  *
  * TODO:
- *  - Add support for larger sizes (many missing)
+ *  - Add support for 26x26
  *  - Determine ideal data size (and ecc size) automatically from supplied
  *    data byte vector
  *  - Determine dimensions and corner type from ideal data size
+ *  - Add support for 32x32, 36x36, 40x40, 44x44, 48x48
  *  - Add support for rectangular matrixes
- *  - Add other encoding modes (low priority)
+ *  - Add support for larger sizes than 48x48
+ *  - Add other encoding modes
  *
  *****************************************************************************/
 use <util/bitlib.scad>
@@ -365,6 +367,7 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 
 	//x-adjustment for split codewords (based on corner type)
 	function splitx(size)=
+		(24==size.x)?2:
 		(22==size.x)?4:
 		(20==size.x)?-2:
 		(18==size.x)?0:
@@ -376,6 +379,7 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 
 	//y-adjustment for split codewords (based on corner type)
 	function splity(size)=
+		(24==size.y)?-2:
 		(22==size.y)?-4:
 		(20==size.y)?2:
 		(18==size.y)?0:
@@ -557,6 +561,9 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 data_matrix(dm_ecc(dm_pad(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a")),30), 30, 20), size=[22,22], corner=1, mark="black");
 /* same as above but using manual padding and ecc */
 //data_matrix(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a"),EOM(),[104,254,150,45,20,78,91,227,88,60,21,174,213,62,93,103,126,46,56,95,247,47,22,65]), size=[22,22], corner=1, mark="black");
+
+/* 24x24 - 36 data bytes, 24 ecc bytes */
+//data_matrix(dm_ecc(dm_ascii("http://de.wikiquote.org/wiki/Zukunft"),36,24), size=[24,24], corner=2, mark="black");
 
 /* base-256 mode example: data is 63=0x3F='?' */
 //data_matrix(dm_ecc(dm_base256_append([base256_mode()],[63],fills_symbol=true), 3, 5), size=[10,10], corner=0, mark="black");
