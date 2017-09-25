@@ -499,39 +499,39 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 /* Examples */
 
 /* 10x10 - 3 data bytes, 5 ecc bytes */
-//data_matrix(dm_ecc(dm_ascii("123456"), 3, 5), size=[10,10], corner=0, mark="black");
+//data_matrix(dm_ecc(dm_ascii("123456")), size=[10,10], corner=0, mark="black");
 /* same as above but with dm_pad(), which is redundant in this case */
-//data_matrix(dm_ecc(dm_pad(dm_ascii("123456"),3), 3, 5), size=[10,10], corner=0, mark="black");
+//data_matrix(dm_ecc(dm_pad(dm_ascii("123456"))), size=[10,10], corner=0, mark="black");
 /* same as above but with manual ecc bytes instead of dm_ecc() */
 //data_matrix(concat(dm_ascii("123456"),[114,25,5,88,102]), size=[10,10], corner=0, mark="black");
 
 /* 12x12 - 5 data bytes, 7 ecc bytes */
-//data_matrix(dm_ecc(dm_pad(dm_ascii("17001164"),5), 5, 7), size=[12,12], corner=0, mark="black");
-//data_matrix(dm_ecc(concat(c40_mode(),dm_c40("H0VLP7")), 5, 7), size=[12,12], corner=0, mark="black");
+//data_matrix(dm_ecc(dm_pad(dm_ascii("17001164"))), size=[12,12], corner=0, mark="black");
+//data_matrix(dm_ecc(concat(c40_mode(),dm_c40("H0VLP7"))), size=[12,12], corner=0, mark="black");
 
 /* 14x14 - 8 data bytes, 10 ecc bytes */
-//data_matrix(dm_ecc(concat(c40_mode(),dm_c40("TELESI"),ascii_mode(),dm_ascii("S1")), 8, 10), size=[14,14], corner=1, mark="black");
+//data_matrix(dm_ecc(concat(c40_mode(),dm_c40("TELESI"),ascii_mode(),dm_ascii("S1"))), size=[14,14], corner=1, mark="black");
 
 /* 16x16 - 12 data bytes, 12 ecc bytes */
-//data_matrix(dm_ecc(dm_pad(dm_ascii("Wikipedia"),12), 12, 12), size=[16,16], corner=2, mark="black");
+//data_matrix(dm_ecc(dm_pad(dm_ascii("Wikipedia"))), size=[16,16], corner=2, mark="black");
 
 /* 18x18 - 18 data bytes, 14 ecc bytes */
-//data_matrix(dm_ecc(dm_pad(dm_ascii("Hourez Jonathan"),18),18,14), size=[18,18], corner=0, mark="black");
+//data_matrix(dm_ecc(dm_pad(dm_ascii("Hourez Jonathan"))), size=[18,18], corner=0, mark="black");
 
 /* 20x20 - 22 data bytes, 18 ecc bytes */
-//data_matrix(dm_ecc(dm_pad(concat([fnc1_mode()],dm_ascii("01034531200000111709112510ABCD1234")),22),22,18), size=[20,20], corner=0, mark="black");
+//data_matrix(dm_ecc(dm_pad(concat([fnc1_mode()],dm_ascii("01034531200000111709112510ABCD1234")))), size=[20,20], corner=0, mark="black");
 
 /* 22x22 - 30 data bytes, 20 ecc bytes */
-//data_matrix(dm_ecc(dm_pad(dm_ascii("http://www.idautomation.com"),30), 30, 20), size=[22,22], corner=1, mark="black");
-data_matrix(dm_ecc(dm_pad(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a")),30), 30, 20), size=[22,22], corner=1, mark="black");
+//data_matrix(dm_ecc(dm_pad(dm_ascii("http://www.idautomation.com"))), size=[22,22], corner=1, mark="black");
+data_matrix(dm_ecc(dm_pad(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a")))), size=[22,22], corner=1, mark="black");
 /* same as above but using manual padding and ecc */
 //data_matrix(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a"),EOM(),[104,254,150,45,20,78,91,227,88,60,21,174,213,62,93,103,126,46,56,95,247,47,22,65]), size=[22,22], corner=1, mark="black");
 
 /* 24x24 - 36 data bytes, 24 ecc bytes */
-//data_matrix(dm_ecc(dm_ascii("http://de.wikiquote.org/wiki/Zukunft"),36,24), size=[24,24], corner=2, mark="black");
+//data_matrix(dm_ecc(dm_ascii("http://de.wikiquote.org/wiki/Zukunft")), size=[24,24], corner=2, mark="black");
 
 /* 26x26 - 44 data bytes, 28 ecc bytes */
-//data_matrix(dm_ecc(dm_pad(dm_ascii("http://semapedia.org/v/Mixer_(consolle)/it"),44),44,28), size=[26,26], corner=0, mark="black");
+//data_matrix(dm_ecc(dm_pad(dm_ascii("http://semapedia.org/v/Mixer_(consolle)/it"))), size=[26,26], corner=0, mark="black");
 
 /* base-256 mode example: data is 63=0x3F='?' */
-//data_matrix(dm_ecc(dm_base256_append([base256_mode()],[63],fills_symbol=true), 3, 5), size=[10,10], corner=0, mark="black");
+//data_matrix(dm_ecc(dm_base256_append([base256_mode()],[63],fills_symbol=true)), size=[10,10], corner=0, mark="black");
