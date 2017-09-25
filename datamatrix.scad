@@ -23,7 +23,7 @@
  * Library Dependencies:
  * - util/bitlib.scad
  * - util/bitmap.scad
- * - util/reed-solomon.scad
+ * - util/datamatrix-util.scad
  *
  * API:
  *   data_matrix(bytes, size, corner, mark, space)
@@ -67,16 +67,10 @@
  *     The final byte of preceding_data must be 'base256_mode()'.
  *     The fills_symbol flag can be used by experts.
  *
- *   dm_pad(data, data_size)
- *     Pad the data byte vector up to data_size using the DataMatrix padding
- *     algorithm (mod 253).
- *     This padding algorithm includes the EOM byte if necessary.
- *
- *   dm_ecc(data, data_size, ecc_size)
- *     Calculate DataMatrix ECC200 error correction bytes over data.
- *     The data vector must have a length of data_size.
- *     The result of this function will be a vector that includes data
- *     followed by ecc_size error correction bytes.
+ * See Also:
+ *   Helper functions from util/datamatrix-util.scad:
+ *   - dm_pad(data, data_size)
+ *   - dm_ecc(data)
  *
  * TODO:
  *  - Determine ideal data size (and ecc size) automatically from supplied
@@ -90,7 +84,7 @@
  *****************************************************************************/
 use <util/bitlib.scad>
 use <util/bitmap.scad>
-use <util/reed-solomon.scad>
+use <util/datamatrix-util.scad>
 
 /* Some definitions of useful data bytes that can be
    concatenated into your byte string */
@@ -257,36 +251,6 @@ function dm_base256_append(preceding_data, byte_data, fills_symbol=false) =
 	let (l = len(preceding_data))
 		(preceding_data[l-1]!=base256_mode())?undef:
 		concat(preceding_data, dm_base256(byte_data, l, fills_symbol));
-
-/*
- * dm_pad - pad a byte vector up to an expected size
- *
- * data - the vector of initial data bytes
- * data_size - the expected vector size
- *  (this value depends on the barcode dimensions)
- *
- * returns undef if len(data) > data_size
- */
-function dm_pad(data, data_size) =
-	(len(data)>data_size)?undef:
-	[
-		for (i=[0:data_size-1])
-			(i==len(data))? EOM():
-			(i>len(data))?
-				let(p=((((149*(i+1))%253)+130)%254))
-					(p==0)?254:p:
-			data[i]
-	];
-
-/*
- * dm_ecc - append DataMatrix ECC200 error correction bytes
- *
- * data - the vector of data bytes
- * data_size - the data length for the particular matrix size
- * ecc_size - the ecc length for the particular matrix size
- */
-function dm_ecc(data,data_size,ecc_size) =
-	concat(data,rs_ecc(data,data_size,ecc_size));
 
 /*
  * data_matrix - Generate a DataMatrix barcode
