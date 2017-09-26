@@ -26,10 +26,11 @@
  * - util/datamatrix-util.scad
  *
  * API:
- *   data_matrix(bytes, mark=1, space=0)
+ *   data_matrix(bytes, mark=1, space=0, expert_mode=false)
  *     Generates a DataMatrix symbol with contents specified by bytes.
  *     The mark and space parameters can be used to change the appearance of
  *     the symbol. See the bitmap library for more details.
+ *     The expert_mode flag should only be used by experts.
  *
  *   dm_ascii(string, frob_digits=true)
  *     Returns a suitable byte array representing string, encoded in
@@ -64,13 +65,7 @@
  *     The final byte of preceding_data must be 'base256_mode()'.
  *     The fills_symbol flag can be used by experts.
  *
- * See Also:
- *   Helper functions from util/datamatrix-util.scad:
- *   - dm_pad(data, data_size)
- *   - dm_ecc(data)
- *
  * TODO:
- *  - Automate pad/ecc action
  *  - Add support for 32x32, 36x36, 40x40, 44x44, 48x48
  *  - Add support for rectangular matrixes
  *  - Add support for larger sizes than 48x48
@@ -254,16 +249,23 @@ function dm_base256_append(preceding_data, byte_data, fills_symbol=false) =
  *
  * mark - mark representation
  * space - space representation
- * (see documentation in bitmap.scad)
+ *   (see documentation in bitmap.scad)
+ * expert_mode - only use this if you are an expert
  */
-module data_matrix(bytes, mark=1, space=0)
+module data_matrix(bytes, mark=1, space=0, expert_mode=false)
 {
-	properties=dm_get_props_by_total_size(len(bytes));
+	properties = (expert_mode)?
+		dm_get_props_by_total_size(len(bytes)):
+		dm_get_props_by_data_size(len(bytes));
+	data_bytes = (expert_mode)?bytes:dm_ecc(dm_pad(bytes));
 	size=dm_prop_dimensions(properties);
 
-	if (size==undef)
-		echo(str("ERROR: could not determine symbol dimensions for ",
-			len(bytes), " bytes of data"));
+	if (properties==undef)
+		if (expert_mode)
+			echo("ERROR: Are you sure you're an expert?");
+		else
+			echo(str("ERROR: Could not determine symbol dimensions. ",
+				len(bytes), " bytes of data might be an unsupported size."));
 
 	corner=dm_prop_corner(properties);
 	xadj=dm_prop_x_adjust(properties);
@@ -451,7 +453,7 @@ module data_matrix(bytes, mark=1, space=0)
 	if (size != undef)
 	translate([2,size.y,0]) {
 		//draw the data region
-		data_matrix_inner(bytes, size, corner, xadj, yadj, mark, space);
+		data_matrix_inner(data_bytes, size, corner, xadj, yadj, mark, space);
 		//draw the L finder pattern
 		translate([-1,-size.y+1])
 			2dbitmap([[for (i=[0:size.x-1]) mark]]);
@@ -476,39 +478,39 @@ module data_matrix(bytes, mark=1, space=0)
 /* Examples */
 
 /* 10x10 - 3 data bytes, 5 ecc bytes */
-//data_matrix(dm_ecc(dm_ascii("123456")), mark="black");
-/* same as above but with dm_pad(), which is redundant in this case */
-//data_matrix(dm_ecc(dm_pad(dm_ascii("123456"))), mark="black");
+//data_matrix(dm_ascii("123456"), mark="black");
 /* same as above but with manual ecc bytes instead of dm_ecc() */
-//data_matrix(concat(dm_ascii("123456"),[114,25,5,88,102]), mark="black");
+//data_matrix(concat(dm_ascii("123456"),[114,25,5,88,102]), mark="black", expert_mode=true);
 
 /* 12x12 - 5 data bytes, 7 ecc bytes */
-//data_matrix(dm_ecc(dm_pad(dm_ascii("17001164"))), mark="black");
-//data_matrix(dm_ecc(concat(c40_mode(),dm_c40("H0VLP7"))), mark="black");
+//data_matrix(dm_ascii("17001164"), mark="black");
+//data_matrix(concat(c40_mode(),dm_c40("H0VLP7")), mark="black");
 
 /* 14x14 - 8 data bytes, 10 ecc bytes */
-//data_matrix(dm_ecc(concat(c40_mode(),dm_c40("TELESI"),ascii_mode(),dm_ascii("S1"))), mark="black");
+//data_matrix(concat(c40_mode(),dm_c40("TELESI"),ascii_mode(),dm_ascii("S1")), mark="black");
 
 /* 16x16 - 12 data bytes, 12 ecc bytes */
-//data_matrix(dm_ecc(dm_pad(dm_ascii("Wikipedia"))), mark="black");
+//data_matrix(dm_ascii("Wikipedia"), mark="black");
 
 /* 18x18 - 18 data bytes, 14 ecc bytes */
-//data_matrix(dm_ecc(dm_pad(dm_ascii("Hourez Jonathan"))), mark="black");
+//data_matrix(dm_ascii("Hourez Jonathan"), mark="black");
 
 /* 20x20 - 22 data bytes, 18 ecc bytes */
-//data_matrix(dm_ecc(dm_pad(concat([fnc1_mode()],dm_ascii("01034531200000111709112510ABCD1234")))), mark="black");
+//data_matrix(concat([fnc1_mode()],dm_ascii("01034531200000111709112510ABCD1234")), mark="black");
 
 /* 22x22 - 30 data bytes, 20 ecc bytes */
-//data_matrix(dm_ecc(dm_pad(dm_ascii("http://www.idautomation.com"))), mark="black");
-data_matrix(dm_ecc(dm_pad(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a")))), mark="black");
-/* same as above but using manual padding and ecc */
-//data_matrix(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a"),EOM(),[104,254,150,45,20,78,91,227,88,60,21,174,213,62,93,103,126,46,56,95,247,47,22,65]), mark="black");
+//data_matrix(dm_ascii("http://www.idautomation.com"), mark="black");
+data_matrix(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a")), mark="black");
+/* same as above but using expert mode */
+//data_matrix(dm_ecc(dm_pad(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a")))), mark="black", expert_mode=true);
+/* same as above but adding padding and ecc completely manually */
+//data_matrix(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a"),EOM(),[104,254,150,45,20,78,91,227,88,60,21,174,213,62,93,103,126,46,56,95,247,47,22,65]), mark="black", expert_mode=true);
 
 /* 24x24 - 36 data bytes, 24 ecc bytes */
-//data_matrix(dm_ecc(dm_ascii("http://de.wikiquote.org/wiki/Zukunft")), mark="black");
+//data_matrix(dm_ascii("http://de.wikiquote.org/wiki/Zukunft"), mark="black");
 
 /* 26x26 - 44 data bytes, 28 ecc bytes */
-//data_matrix(dm_ecc(dm_pad(dm_ascii("http://semapedia.org/v/Mixer_(consolle)/it"))), mark="black");
+//data_matrix(dm_ascii("http://semapedia.org/v/Mixer_(consolle)/it"), mark="black");
 
 /* base-256 mode example: data is 63=0x3F='?' */
-//data_matrix(dm_ecc(dm_base256_append([base256_mode()],[63],fills_symbol=true)), mark="black");
+//data_matrix(dm_base256_append([base256_mode()],[63],fills_symbol=true), mark="black");
