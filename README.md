@@ -18,7 +18,7 @@ Include datamatrix.scad in your model with the use command.
 See the documentation in [datamatrix.scad](datamatrix.scad) for more details.
 ```
 use <datamatrix.scad>
-data_matrix(dm_ecc(dm_pad(dm_ascii("1234"))), size=[10,10], corner=0);
+data_matrix(dm_ecc(dm_pad(dm_ascii("1234"))));
 ```
 
 ## Software License

@@ -26,11 +26,8 @@
  * - util/datamatrix-util.scad
  *
  * API:
- *   data_matrix(bytes, size, corner, mark, space)
+ *   data_matrix(bytes, mark=1, space=0)
  *     Generates a DataMatrix symbol with contents specified by bytes.
- *     The size parameter is the dimension of the symbol.
- *     The corner parameter will depend on the overall size and should be
- *     automated in the future.
  *     The mark and space parameters can be used to change the appearance of
  *     the symbol. See the bitmap library for more details.
  *
@@ -73,9 +70,7 @@
  *   - dm_ecc(data)
  *
  * TODO:
- *  - Determine ideal data size (and ecc size) automatically from supplied
- *    data byte vector
- *  - Determine dimensions and corner type from ideal data size
+ *  - Automate pad/ecc action
  *  - Add support for 32x32, 36x36, 40x40, 44x44, 48x48
  *  - Add support for rectangular matrixes
  *  - Add support for larger sizes than 48x48
@@ -256,18 +251,25 @@ function dm_base256_append(preceding_data, byte_data, fills_symbol=false) =
  * data_matrix - Generate a DataMatrix barcode
  *
  * bytes - data bytes to encode
- * size - dimensions of the barcode (must be multiple of two)
- * corner - corner style to use
- * (TODO: determine this automatically)
  *
  * mark - mark representation
  * space - space representation
  * (see documentation in bitmap.scad)
  */
-module data_matrix(bytes, size, corner, mark=1, space=0)
+module data_matrix(bytes, mark=1, space=0)
 {
-	if ((size==undef) || (size.x%2) || (size.y%2))
-		echo("WARNING: size must be a multiple of two in each dimension");
+	properties=dm_get_props_by_total_size(len(bytes));
+	size=dm_prop_dimensions(properties);
+
+	if (size==undef)
+		echo(str("ERROR: could not determine symbol dimensions for ",
+			len(bytes), " bytes of data"));
+
+	corner=dm_prop_corner(properties);
+	xadj=dm_prop_x_adjust(properties);
+	yadj=dm_prop_y_adjust(properties);
+
+	//echo(str("DEBUG size=", size, " xadj=", xadj, " yadj=", yadj, " corner=", corner));
 
 	//split the codeword into two, selecting columns
 	function colsplit(s, x) =
@@ -328,32 +330,6 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 				]);
 	}
 
-	//x-adjustment for split codewords (based on corner type)
-	function splitx(size)=
-		(26==size.x)?0:
-		(24==size.x)?2:
-		(22==size.x)?4:
-		(20==size.x)?-2:
-		(18==size.x)?0:
-		(16==size.x)?2:
-		(14==size.x)?4:
-		(12==size.x)?-2:
-		(10==size.x)?0:
-		0;
-
-	//y-adjustment for split codewords (based on corner type)
-	function splity(size)=
-		(26==size.y)?0:
-		(24==size.y)?-2:
-		(22==size.y)?-4:
-		(20==size.y)?2:
-		(18==size.y)?0:
-		(16==size.y)?-2:
-		(14==size.y)?-4:
-		(12==size.y)?2:
-		(10==size.y)?0:
-		0;
-
 	//check whether x,y have entered the upper-right corner
 	//codeword shape (based on corner type)
 	function check_corner_collision(corner, size, x, y)=
@@ -375,7 +351,7 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 	//coordinates
 	//uses size and corner type to split the codeword
 	//across the edges of the symbol
-	module draw_codeword(bitmap, size, corner, x, y)
+	module draw_codeword(bitmap, x, y, size, corner, xadj, yadj)
 	{
 		if (x<0) {
 			if ((corner) && (-y+4>size.y)) {
@@ -384,14 +360,14 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 			} else {
 				translate([0,y,0])
 					2dbitmap(colsplit(bitmap, x));
-				translate([size.x+x-2,y+splity(size),0])
+				translate([size.x+x-2,y+yadj,0])
 					2dbitmap(colsplit(bitmap, -x));
 			}
 		} else {
 			if (y+2>=0) {
 				translate([x,y,0])
 					2dbitmap(rowsplit(bitmap, y));
-				translate([x+splitx(size),-size.y+2,0])
+				translate([x+xadj,-size.y+2,0])
 					2dbitmap(rowsplit(bitmap, -y));
 			} else {
 				translate([x,y,0])
@@ -404,7 +380,7 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 	//this module is called recursively with i, x, y, and direction
 	//iterating across the data region of the symbol
 	//size and corner define the shape of the symbol
-	module data_matrix_inner(bytes, size, corner, mark=1, space=0, i=0, x=-2, y=-5, direction=0)
+	module data_matrix_inner(bytes, size, corner, xadj, yadj, mark=1, space=0, i=0, x=-2, y=-5, direction=0)
 	{
 		//echo(str("DEBUG x=", x, " y=", y, " dir=", direction%2, " val=", bytes[i]));
 
@@ -416,7 +392,7 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 			translate([size.x-4,-size.y+2,0])
 				2dbitmap(unusedshape(size, mark, space));
 		else
-			draw_codeword(bitmap, size, corner, x, y);
+			draw_codeword(bitmap, x, y, size, corner, xadj, yadj);
 
 		// recurse
 		if (i<len(bytes)) {
@@ -426,45 +402,45 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 						new_dir = direction+1;
 						new_x=x+5;
 						new_y=y+1;
-						data_matrix_inner(bytes, size, corner, mark, space, i+1, new_x, new_y, new_dir);
+						data_matrix_inner(bytes, size, corner, xadj, yadj, mark, space, i+1, new_x, new_y, new_dir);
 					} else if (-y+4>=size.y) {
 						new_dir = direction+1;
 						new_x=x+3;
 						new_y=y-1;
-						data_matrix_inner(bytes, size, corner, mark, space, i+1, new_x, new_y, new_dir);
+						data_matrix_inner(bytes, size, corner, xadj, yadj, mark, space, i+1, new_x, new_y, new_dir);
 					} else {
 						new_dir = direction+1;
 						new_x=x-2+1;
 						new_y=y-2-3;
-						data_matrix_inner(bytes, size, corner, mark, space, i+1, new_x, new_y, new_dir);
+						data_matrix_inner(bytes, size, corner, xadj, yadj, mark, space, i+1, new_x, new_y, new_dir);
 					}
 				} else if (-y+2>=size.y) {
 					new_dir = direction+1;
 					new_x=x+2+3;
 					new_y=y+2-1;
-					data_matrix_inner(bytes, size, corner, mark, space, i+1, new_x, new_y, new_dir);
+					data_matrix_inner(bytes, size, corner, xadj, yadj, mark, space, i+1, new_x, new_y, new_dir);
 				} else {
 					new_x=x-2;
 					new_y=y-2;
 					new_dir = direction;
-					data_matrix_inner(bytes, size, corner, mark, space, i+1, new_x, new_y, new_dir);
+					data_matrix_inner(bytes, size, corner, xadj, yadj, mark, space, i+1, new_x, new_y, new_dir);
 				}
 			} else {
 				if ((y+2>0) || check_corner_collision(corner, size, x, y)) {
 					new_dir = direction+1;
 					new_x=x+2+1;
 					new_y=y+2-3;
-					data_matrix_inner(bytes, size, corner, mark, space,  i+1, new_x, new_y, new_dir);
+					data_matrix_inner(bytes, size, corner, xadj, yadj, mark, space,  i+1, new_x, new_y, new_dir);
 				} else if (x+5>=size.x-2) {
 					new_dir = direction+1;
 					new_x=x-2+3;
 					new_y=y-2-1;
-					data_matrix_inner(bytes, size, corner, mark, space,  i+1, new_x, new_y, new_dir);
+					data_matrix_inner(bytes, size, corner, xadj, yadj, mark, space,  i+1, new_x, new_y, new_dir);
 				} else {
 					new_x=x+2;
 					new_y=y+2;
 					new_dir = direction;
-					data_matrix_inner(bytes, size, corner, mark, space,  i+1, new_x, new_y, new_dir);
+					data_matrix_inner(bytes, size, corner, xadj, yadj, mark, space,  i+1, new_x, new_y, new_dir);
 				}
 			}
 		}
@@ -472,9 +448,10 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 
 
 	// draw the symbol
+	if (size != undef)
 	translate([2,size.y,0]) {
 		//draw the data region
-		data_matrix_inner(bytes, size, corner, mark, space);
+		data_matrix_inner(bytes, size, corner, xadj, yadj, mark, space);
 		//draw the L finder pattern
 		translate([-1,-size.y+1])
 			2dbitmap([[for (i=[0:size.x-1]) mark]]);
@@ -499,39 +476,39 @@ module data_matrix(bytes, size, corner, mark=1, space=0)
 /* Examples */
 
 /* 10x10 - 3 data bytes, 5 ecc bytes */
-//data_matrix(dm_ecc(dm_ascii("123456")), size=[10,10], corner=0, mark="black");
+//data_matrix(dm_ecc(dm_ascii("123456")), mark="black");
 /* same as above but with dm_pad(), which is redundant in this case */
-//data_matrix(dm_ecc(dm_pad(dm_ascii("123456"))), size=[10,10], corner=0, mark="black");
+//data_matrix(dm_ecc(dm_pad(dm_ascii("123456"))), mark="black");
 /* same as above but with manual ecc bytes instead of dm_ecc() */
-//data_matrix(concat(dm_ascii("123456"),[114,25,5,88,102]), size=[10,10], corner=0, mark="black");
+//data_matrix(concat(dm_ascii("123456"),[114,25,5,88,102]), mark="black");
 
 /* 12x12 - 5 data bytes, 7 ecc bytes */
-//data_matrix(dm_ecc(dm_pad(dm_ascii("17001164"))), size=[12,12], corner=0, mark="black");
-//data_matrix(dm_ecc(concat(c40_mode(),dm_c40("H0VLP7"))), size=[12,12], corner=0, mark="black");
+//data_matrix(dm_ecc(dm_pad(dm_ascii("17001164"))), mark="black");
+//data_matrix(dm_ecc(concat(c40_mode(),dm_c40("H0VLP7"))), mark="black");
 
 /* 14x14 - 8 data bytes, 10 ecc bytes */
-//data_matrix(dm_ecc(concat(c40_mode(),dm_c40("TELESI"),ascii_mode(),dm_ascii("S1"))), size=[14,14], corner=1, mark="black");
+//data_matrix(dm_ecc(concat(c40_mode(),dm_c40("TELESI"),ascii_mode(),dm_ascii("S1"))), mark="black");
 
 /* 16x16 - 12 data bytes, 12 ecc bytes */
-//data_matrix(dm_ecc(dm_pad(dm_ascii("Wikipedia"))), size=[16,16], corner=2, mark="black");
+//data_matrix(dm_ecc(dm_pad(dm_ascii("Wikipedia"))), mark="black");
 
 /* 18x18 - 18 data bytes, 14 ecc bytes */
-//data_matrix(dm_ecc(dm_pad(dm_ascii("Hourez Jonathan"))), size=[18,18], corner=0, mark="black");
+//data_matrix(dm_ecc(dm_pad(dm_ascii("Hourez Jonathan"))), mark="black");
 
 /* 20x20 - 22 data bytes, 18 ecc bytes */
-//data_matrix(dm_ecc(dm_pad(concat([fnc1_mode()],dm_ascii("01034531200000111709112510ABCD1234")))), size=[20,20], corner=0, mark="black");
+//data_matrix(dm_ecc(dm_pad(concat([fnc1_mode()],dm_ascii("01034531200000111709112510ABCD1234")))), mark="black");
 
 /* 22x22 - 30 data bytes, 20 ecc bytes */
-//data_matrix(dm_ecc(dm_pad(dm_ascii("http://www.idautomation.com"))), size=[22,22], corner=1, mark="black");
-data_matrix(dm_ecc(dm_pad(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a")))), size=[22,22], corner=1, mark="black");
+//data_matrix(dm_ecc(dm_pad(dm_ascii("http://www.idautomation.com"))), mark="black");
+data_matrix(dm_ecc(dm_pad(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a")))), mark="black");
 /* same as above but using manual padding and ecc */
-//data_matrix(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a"),EOM(),[104,254,150,45,20,78,91,227,88,60,21,174,213,62,93,103,126,46,56,95,247,47,22,65]), size=[22,22], corner=1, mark="black");
+//data_matrix(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a"),EOM(),[104,254,150,45,20,78,91,227,88,60,21,174,213,62,93,103,126,46,56,95,247,47,22,65]), mark="black");
 
 /* 24x24 - 36 data bytes, 24 ecc bytes */
-//data_matrix(dm_ecc(dm_ascii("http://de.wikiquote.org/wiki/Zukunft")), size=[24,24], corner=2, mark="black");
+//data_matrix(dm_ecc(dm_ascii("http://de.wikiquote.org/wiki/Zukunft")), mark="black");
 
 /* 26x26 - 44 data bytes, 28 ecc bytes */
-//data_matrix(dm_ecc(dm_pad(dm_ascii("http://semapedia.org/v/Mixer_(consolle)/it"))), size=[26,26], corner=0, mark="black");
+//data_matrix(dm_ecc(dm_pad(dm_ascii("http://semapedia.org/v/Mixer_(consolle)/it"))), mark="black");
 
 /* base-256 mode example: data is 63=0x3F='?' */
-//data_matrix(dm_ecc(dm_base256_append([base256_mode()],[63],fills_symbol=true)), size=[10,10], corner=0, mark="black");
+//data_matrix(dm_ecc(dm_base256_append([base256_mode()],[63],fills_symbol=true)), mark="black");
