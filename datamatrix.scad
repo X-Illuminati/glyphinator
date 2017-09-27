@@ -26,10 +26,10 @@
  * - util/datamatrix-util.scad
  *
  * API:
- *   data_matrix(bytes, mark=1, space=0, expert_mode=false)
+ *   data_matrix(bytes, mark=1, space=0, quietzone=0, expert_mode=false)
  *     Generates a DataMatrix symbol with contents specified by bytes.
- *     The mark and space parameters can be used to change the appearance of
- *     the symbol. See the bitmap library for more details.
+ *     The mark, space, and quietzone parameters can be used to change the
+ *     appearance of the symbol. See the bitmap library for more details.
  *     The expert_mode flag should only be used by experts.
  *
  *   dm_ascii(string, frob_digits=true)
@@ -249,10 +249,11 @@ function dm_base256_append(preceding_data, byte_data, fills_symbol=false) =
  *
  * mark - mark representation
  * space - space representation
+ * quietzone - representation for the quiet zone
  *   (see documentation in bitmap.scad)
  * expert_mode - only use this if you are an expert
  */
-module data_matrix(bytes, mark=1, space=0, expert_mode=false)
+module data_matrix(bytes, mark=1, space=0, quietzone=0, expert_mode=false)
 {
 	properties = (expert_mode)?
 		dm_get_props_by_total_size(len(bytes)):
@@ -465,13 +466,13 @@ module data_matrix(bytes, mark=1, space=0, expert_mode=false)
 			2dbitmap([for (i=[1:size.y-2]) [(i%2)?mark:space]]);
 		//draw the quiet zone
 		translate([-2,-size.y])
-			2dbitmap([[for (i=[0:size.x+1]) space]]);
+			2dbitmap([[for (i=[0:size.x+1]) quietzone]]);
 		translate([-2,-size.y+1])
-			2dbitmap([for (i=[0:size.y]) [space]]);
+			2dbitmap([for (i=[0:size.y]) [quietzone]]);
 		translate([-1,1])
-			2dbitmap([[for (i=[0:size.x-1]) space]]);
+			2dbitmap([[for (i=[0:size.x-1]) quietzone]]);
 		translate([size.x-1,-size.y+1])
-			2dbitmap([for (i=[1:size.y+1]) [space]]);
+			2dbitmap([for (i=[1:size.y+1]) [quietzone]]);
 	}
 }
 
