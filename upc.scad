@@ -84,12 +84,14 @@ function upc_symbol_len(symbol) =
  * 
  * bar - bar representation
  * space - space representation
+ * quiet_zone - representation for quiet zone
  * (see documentation in bitmap.scad)
  *
  * parity - false for even, true for odd
  * reverse - true to mirror the symbol (EAN use)
  */
-module upc_symbol(symbol, bar=1, space=0, parity=true, reverse=false)
+module upc_symbol(symbol, bar=1, space=0, quiet_zone=0,
+	parity=true, reverse=false)
 {
 	B=parity?bar:space;
 	S=parity?space:bar;
@@ -97,7 +99,8 @@ module upc_symbol(symbol, bar=1, space=0, parity=true, reverse=false)
 	vector = [
 		for (i=[0:1:upc_symbol_len(symbol)-1])
 			let (index=reverse?upc_symbol_len(symbol)-i-1:i)
-				symbol_vector[symbol][index]?B:S
+				(symbol==10)?quiet_zone:
+				(symbol_vector[symbol][index])?B:S
 	];
 
 	1dbitmap(vector);
@@ -111,13 +114,14 @@ module upc_symbol(symbol, bar=1, space=0, parity=true, reverse=false)
  * 
  * bar - bar representation
  * space - space representation
+ * quiet_zone - representation for quiet zone
  * (see documentation in bitmap.scad)
  *
  * font - font to use for decimal digits below each symbol
  *   set to undef if you do not want any text
  * fontsize - font size to use
  */
-module UPC_A(string, bar=1, space=0,
+module UPC_A(string, bar=1, space=0, quiet_zone=0,
 	font="Liberation Mono:style=Bold", fontsize=1.5)
 {
 
@@ -188,16 +192,16 @@ module UPC_A(string, bar=1, space=0,
 	//i incrementing from 0 to 16
 	//x is also incremented to translate each symbol
 	//along the x-axis
-	module draw_symbol(string, bar=1, space=0, x=0, i=0)
+	module draw_symbol(string, bar=1, space=0, quiet_zone=0, x=0, i=0)
 	{
 		translate([0,27.55-get_height(i),0])
 			scale([0.33, get_height(i), 1])
 				translate([x,0,0])
 					upc_symbol(symbol=get_symbol(string,i),
-						bar=bar, space=space,
+						bar=bar, space=space, quiet_zone=quiet_zone,
 						parity=get_parity(i));
 		if (i<16)
-			draw_symbol(string, bar, space,
+			draw_symbol(string, bar, space, quiet_zone,
 				x+upc_symbol_len(get_symbol(string,i)),
 				i+1);
 	}
@@ -244,7 +248,7 @@ module UPC_A(string, bar=1, space=0,
 			draw_text(string, font, fontsize, i+1);
 	}
 
-	draw_symbol(string, bar=bar, space=space);
+	draw_symbol(string, bar=bar, space=space, quiet_zone=quiet_zone);
 	if (font)
 		if (len(bar))
 			color(bar) linear_extrude(height=1)
