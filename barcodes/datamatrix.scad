@@ -72,9 +72,9 @@
  *  - Add other encoding modes
  *
  *****************************************************************************/
-use <util/bitlib.scad>
-use <util/bitmap.scad>
-use <util/datamatrix-util.scad>
+use <../util/bitlib.scad>
+use <../util/bitmap.scad>
+use <../util/datamatrix-util.scad>
 
 /* Some definitions of useful data bytes that can be
    concatenated into your byte string */

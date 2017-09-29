@@ -7,17 +7,18 @@ Supports UPC-A and DataMatrix (ECC200) barcodes. More to come!
 
 ### UPC-A
 Include upc.scad in your model with the use command.
-See the documentation in [upc.scad](upc.scad) for more details.
+See the documentation in [upc.scad](barcodes/upc.scad) for more details.
 ```
-use <upc.scad>
+use <barcodes/upc.scad>
 UPC_A("01234554321");
 ```
 
 ### DataMatrix
 Include datamatrix.scad in your model with the use command.
-See the documentation in [datamatrix.scad](datamatrix.scad) for more details.
+See the documentation in [datamatrix.scad](barcodes/datamatrix.scad) for more
+details.
 ```
-use <datamatrix.scad>
+use <barcodes/datamatrix.scad>
 data_matrix(dm_ascii("1234"));
 ```
 

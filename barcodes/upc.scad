@@ -32,7 +32,7 @@
  * TODO:
  *   Add EAN-13 support
  *****************************************************************************/
-use <util/bitmap.scad>
+use <../util/bitmap.scad>
 
 /*
  * symbol definitions arranged in a convenient array
