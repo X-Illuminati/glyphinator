@@ -13,6 +13,9 @@ use <barcodes/upc.scad>
 UPC_A("01234554321");
 ```
 
+![UPC-A Example](doc/upc-example.png)
+![UPC-A Example](doc/upc-example2.png)
+
 ### DataMatrix
 Include datamatrix.scad in your model with the use command.
 See the documentation in [datamatrix.scad](barcodes/datamatrix.scad) for more
@@ -21,6 +24,9 @@ details.
 use <barcodes/datamatrix.scad>
 data_matrix(dm_ascii("1234"));
 ```
+
+![DataMatrix Example](doc/datamatrix-example.png)
+![DataMatrix Example](doc/datamatrix-example2.png)
 
 ## Software License
 Glyphinator is free software: you can redistribute it and/or modify
