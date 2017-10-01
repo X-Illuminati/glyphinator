@@ -24,11 +24,13 @@
  * - util/bitlib.scad
  * - util/bitmap.scad
  * - util/datamatrix-util.scad
+ *   - util/reed-solomon.scad
+ *     - util/bitlib.scad
  *
  * API:
- *   data_matrix(bytes, mark=1, space=0, quietzone=0, expert_mode=false)
+ *   data_matrix(bytes, mark=1, space=0, quiet_zone=0, expert_mode=false)
  *     Generates a DataMatrix symbol with contents specified by bytes.
- *     The mark, space, and quietzone parameters can be used to change the
+ *     The mark, space, and quiet_zone parameters can be used to change the
  *     appearance of the symbol. See the bitmap library for more details.
  *     The expert_mode flag should only be used by experts.
  *
@@ -85,21 +87,6 @@ function fnc1_mode() = 232; // begin FNC1 (GS1-DataMatrix) encoding mode
 function text_mode() = 239; // begin text encoding mode
 function ascii_mode() = 254; // return to ASCII encoding mode
 function unused() = 0; // 0 is explicitly not used as a control code
-
-/*
- * dm_codeword - generate a single codeword as a 2D array
- *   suitable for passing to the 2dbitmap module
- *
- * x - data byte to encode
- * M - mark value
- * S - space value
- * (see documentation in bitmap.scad)
- */
-function dm_codeword(x, M=1, S=0) = [
-	[bit(x,7)?M:S, bit(x,6)?M:S, 0],
-	[bit(x,5)?M:S, bit(x,4)?M:S, bit(x,3)?M:S],
-	[bit(x,2)?M:S, bit(x,1)?M:S, bit(x,0)?M:S]
-];
 
 /*
  * ascii_to_dec - convert ASCII string to decimal vector
@@ -249,11 +236,11 @@ function dm_base256_append(preceding_data, byte_data, fills_symbol=false) =
  *
  * mark - mark representation
  * space - space representation
- * quietzone - representation for the quiet zone
+ * quiet_zone - representation for the quiet zone
  *   (see documentation in bitmap.scad)
  * expert_mode - only use this if you are an expert
  */
-module data_matrix(bytes, mark=1, space=0, quietzone=0, expert_mode=false)
+module data_matrix(bytes, mark=1, space=0, quiet_zone=0, expert_mode=false)
 {
 	properties = (expert_mode)?
 		dm_get_props_by_total_size(len(bytes)):
@@ -273,6 +260,14 @@ module data_matrix(bytes, mark=1, space=0, quietzone=0, expert_mode=false)
 	yadj=dm_prop_y_adjust(properties);
 
 	//echo(str("DEBUG size=", size, " xadj=", xadj, " yadj=", yadj, " corner=", corner));
+
+	//generate a single codeword as a 2D array
+	//suitable for passing to the 2dbitmap module
+	function dm_codeword(x, M=1, S=0) = [
+		[bit(x,7)?M:S, bit(x,6)?M:S, 0],
+		[bit(x,5)?M:S, bit(x,4)?M:S, bit(x,3)?M:S],
+		[bit(x,2)?M:S, bit(x,1)?M:S, bit(x,0)?M:S]
+	];
 
 	//split the codeword into two, selecting columns
 	function colsplit(s, x) =
@@ -466,13 +461,13 @@ module data_matrix(bytes, mark=1, space=0, quietzone=0, expert_mode=false)
 			2dbitmap([for (i=[1:size.y-2]) [(i%2)?mark:space]]);
 		//draw the quiet zone
 		translate([-2,-size.y])
-			2dbitmap([[for (i=[0:size.x+1]) quietzone]]);
+			2dbitmap([[for (i=[0:size.x+1]) quiet_zone]]);
 		translate([-2,-size.y+1])
-			2dbitmap([for (i=[0:size.y]) [quietzone]]);
+			2dbitmap([for (i=[0:size.y]) [quiet_zone]]);
 		translate([-1,1])
-			2dbitmap([[for (i=[0:size.x-1]) quietzone]]);
+			2dbitmap([[for (i=[0:size.x-1]) quiet_zone]]);
 		translate([size.x-1,-size.y+1])
-			2dbitmap([for (i=[1:size.y+1]) [quietzone]]);
+			2dbitmap([for (i=[1:size.y+1]) [quiet_zone]]);
 	}
 }
 
