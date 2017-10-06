@@ -29,7 +29,6 @@
  *
  * TODO:
  * - Format patterns
- * - XOR mask
  * - ECC calculation
  * - Data encoding
  * - Larger sizes
@@ -46,12 +45,22 @@ use <../util/bitmap.scad>
  * ecc_level - determines ratio of ecc:data bytes
  *   0=Low, 1=Mid, 2=Quality, 3=High
  *
+ * mask - mask pattern applied on data/ecc bytes
+ *   0=checkerboard (fine),
+ *   1=rows,
+ *   2=columns,
+ *   3=diagonals,
+ *   4=checkerboard (coarse),
+ *   5=* tiles,
+ *   6=<> tiles,
+ *   7=bowties
+ *
  * mark - mark representation
  * space - space representation
  * quiet_zone - representation for the quiet zone
  *   (see documentation in bitmap.scad)
  */
-module quick_response(bytes, version=1, ecc_level=2, mark=1, space=0, quiet_zone=0)
+module quick_response(bytes, version=1, ecc_level=2, mask=0, mark=1, space=0, quiet_zone=0)
 {
 	qr_properties = [
 		/*ver- sz,#a, #cw,rem,#L, #M, #Q, #H*/
@@ -114,59 +123,59 @@ module quick_response(bytes, version=1, ecc_level=2, mark=1, space=0, quiet_zone
 	cw_skirt = 5; //box cw that skirts alignment pattern
 	cw_rem7 = 6; //remainder 7-space pattern
 
-	//generate a single codeword as a 2D array
-	//suitable for passing to the 2dbitmap module
-	//codeword returned is facing in the "up" direction,
-	//reverse the order of the rows for the "down" direction.
-	function codeword(x, style=0, M=1, S=0) =
+	//convert the byte value x to a 2D bool array with a shape
+	//dictated by the style parameter
+	//the codeword array returned is facing in the "up" direction
+	//reverse the order of the rows for the "down" direction
+	function codeword(x, style=0) =
 	(style==cw_box)?
 	[
-		[bit(x,0)?M:S, bit(x,1)?M:S],
-		[bit(x,2)?M:S, bit(x,3)?M:S],
-		[bit(x,4)?M:S, bit(x,5)?M:S],
-		[bit(x,6)?M:S, bit(x,7)?M:S]
+		[bit(x,0), bit(x,1)],
+		[bit(x,2), bit(x,3)],
+		[bit(x,4), bit(x,5)],
+		[bit(x,6), bit(x,7)]
 	]:
 	(style==cw_u_box)?
 	[
-		[bit(x,2)?M:S, bit(x,3)?M:S, bit(x,4)?M:S, bit(x,5)?M:S],
-		[bit(x,0)?M:S, bit(x,1)?M:S, bit(x,6)?M:S, bit(x,7)?M:S]
+		[bit(x,2), bit(x,3), bit(x,4), bit(x,5)],
+		[bit(x,0), bit(x,1), bit(x,6), bit(x,7)]
 	]:
 	(style==cw_l_box)?
 	[
-		[bit(x,0)?M:S, bit(x,1)?M:S, bit(x,2)?M:S, bit(x,3)?M:S],
-		[           0,            0, bit(x,4)?M:S, bit(x,5)?M:S],
-		[           0,            0, bit(x,6)?M:S, bit(x,7)?M:S]
+		[bit(x,0), bit(x,1), bit(x,2), bit(x,3)],
+		[   undef,    undef, bit(x,4), bit(x,5)],
+		[   undef,    undef, bit(x,6), bit(x,7)]
 	]:
 	(style==cw_skew)?
 	[
-		[           0, bit(x,0)?M:S],
-		[bit(x,1)?M:S, bit(x,2)?M:S],
-		[bit(x,3)?M:S, bit(x,4)?M:S],
-		[bit(x,5)?M:S, bit(x,6)?M:S],
-		[bit(x,7)?M:S,            0]
+		[   undef, bit(x,0)],
+		[bit(x,1), bit(x,2)],
+		[bit(x,3), bit(x,4)],
+		[bit(x,5), bit(x,6)],
+		[bit(x,7),    undef]
 	]:
 	(style==cw_l_skew)?
 	[
-		[bit(x,0)?M:S, bit(x,1)?M:S, bit(x,2)?M:S],
-		[           0, bit(x,3)?M:S, bit(x,4)?M:S],
-		[           0, bit(x,5)?M:S, bit(x,6)?M:S],
-		[           0, bit(x,7)?M:S,            0]
+		[bit(x,0), bit(x,1), bit(x,2)],
+		[   undef, bit(x,3), bit(x,4)],
+		[   undef, bit(x,5), bit(x,6)],
+		[   undef, bit(x,7),    undef]
 	]:
 	(style==cw_skirt)?
 	[
-		[bit(x,0)?M:S,            0],
-		[bit(x,1)?M:S,            0],
-		[bit(x,2)?M:S,            0],
-		[bit(x,3)?M:S,            0],
-		[bit(x,4)?M:S, bit(x,5)?M:S],
-		[bit(x,6)?M:S, bit(x,7)?M:S]
+		[bit(x,0),    undef],
+		[bit(x,1),    undef],
+		[bit(x,2),    undef],
+		[bit(x,3),    undef],
+		[bit(x,4), bit(x,5)],
+		[bit(x,6), bit(x,7)]
 	]:
 	(style==cw_rem7)?
 	[
-		[S,S],
-		[S,S],
-		[S,S],
-		[S,0]
+		[false,false],
+		[false,false],
+		[false,false],
+		[false,undef]
 	]:
 	undef;
 
@@ -257,6 +266,39 @@ module quick_response(bytes, version=1, ecc_level=2, mark=1, space=0, quiet_zone
 				style:
 			style;
 
+	//calculate the masked value of bit b
+	//at position x,y
+	function mask_bit(b, x, y) =
+		(b==undef)?undef:
+		let(_y=dims-y-1) (
+			(mask==0)?(x+_y)%2:
+			(mask==1)?_y%2:
+			(mask==2)?x%3:
+			(mask==3)?(x+_y)%3:
+			(mask==4)?(floor(x/3) + floor(_y/2))%2:
+			(mask==5)?(x*_y)%2+(x*_y)%3:
+			(mask==6)?((x*_y)%2+(x*_y)%3)%2:
+			(mask==7)?((x+_y)%2+(x*_y)%3)%2:
+			0)?b:!b;
+
+	//run the 2d bitmap, bm, through the mask
+	//process and then draw it at the desired x,y
+	//position using the 2dbitmap module
+	module masked_bitmap(bm, x, y) {
+		rows=len(bm)-1;
+		cooked = [
+			for (i=[0:rows]) [
+				for (j=[0:len(bm[i])-1])
+					let (b=mask_bit(bm[i][j],x+j,y+rows-i))
+						(b==true)?mark:
+						(b==false)?space:
+						undef
+				]
+			];
+		translate([x,y])
+			2dbitmap(cooked);
+	}
+
 	//draw individual codewords from bytes array
 	//this module is called recursively with i, x, and y
 	//iterating across the data region of the symbol
@@ -289,31 +331,26 @@ module quick_response(bytes, version=1, ecc_level=2, mark=1, space=0, quiet_zone
 		//if ((hsplit!=undef) || (yadj)) echo(str("DEBUG hsplit=",hsplit," yadj=",yadj));
 
 		//get the codeword array (reversing rows if needed)
-		cw=let(_cw=codeword(bytes[i], mode, M=mark, S=space))
+		cw=let(_cw=codeword(bytes[i], mode))
 			(dir==0)?_cw:
 			[for (i=[s.y-1:-1:0]) _cw[i]];
 
 		if (hsplit && (hsplit!=s.y)) {
 			//upper half
 			cw1=[for (i=[0:hsplit-1]) cw[i]];
-			translate([x,y+yadj+(s.y-hsplit)+(dir?-yadj:0)])
-				2dbitmap(cw1);
+			masked_bitmap(cw1, x, y+yadj+(s.y-hsplit)+(dir?-yadj:0));
 			//lower half
 			cw2=[for (i=[hsplit:s.y-1]) cw[i]];
-			translate([x,y+(dir?yadj:0)])
-				2dbitmap(cw2);
+			masked_bitmap(cw2, x, y+(dir?yadj:0));
 		} else if (vsplit && (vsplit!=s.x)) {
 			//left half
 			cw1=[for (row=cw) [for (i=[0:vsplit-1]) row[i]]];
-			translate([x+xadj,y+yadj])
-				2dbitmap(cw1);
+			masked_bitmap(cw1, x+xadj, y+yadj);
 			//right half
 			cw2=[for (row=cw) [for (i=[vsplit:s.x-1]) row[i]]];
-			translate([x+vsplit,y+(fc?0:yadj)])
-				2dbitmap(cw2);
+			masked_bitmap(cw2, x+vsplit, y+(fc?0:yadj));
 		} else {
-			translate([x+xadj,y+yadj])
-				2dbitmap(cw);
+			masked_bitmap(cw, x+xadj, y+yadj);
 		}
 
 		if (i<(size-(rem_bits?0:1))) {
@@ -415,7 +452,8 @@ module quick_response(bytes, version=1, ecc_level=2, mark=1, space=0, quiet_zone
 
 /* Examples */
 quick_response(
-	[255,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,193,255],
-//	[255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255],
-	version=3, mark=[.8,.2,.2,.4], space=[.8,.8,1,.4], quiet_zone=[.2,.2,.2,.1]
+//	[for (i=[0:171]) 193],
+	[for (i=[0:171]) 0],
+	version=3, mask=7,
+	mark=[.8,.2,.2,.4], space=[.8,.8,1,.4], quiet_zone=[.2,.2,.2,.1]
 );
