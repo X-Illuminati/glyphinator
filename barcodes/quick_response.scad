@@ -28,7 +28,6 @@
  *   quick_response(bytes, mark=1, space=0, quiet_zone=0)
  *
  * TODO:
- * - Format patterns
  * - ECC calculation
  * - Data encoding
  * - Larger sizes
@@ -62,6 +61,13 @@ use <../util/bitmap.scad>
  */
 module quick_response(bytes, version=1, ecc_level=2, mask=0, mark=1, space=0, quiet_zone=0)
 {
+	if ((version<1) || (version>40))
+		echo(str("ERROR: version ", version, " is invalid"));
+	if ((ecc_level<0) || (ecc_level>3))
+		echo(str("ERROR: ecc_level ", ecc_level, " is invalid"));
+	if ((mask<0) || (mask>7))
+		echo(str("ERROR: mask ", mask, " is invalid"));
+
 	qr_properties = [
 		/*ver- sz,#a, #cw,rem,#L, #M, #Q, #H*/
 		[/*1*/ 21, 0,  26,  0],
@@ -71,6 +77,9 @@ module quick_response(bytes, version=1, ecc_level=2, mask=0, mark=1, space=0, qu
 		[/*5*/ 37, 1, 134,  7],
 		[/*6*/ 41, 1, 172,  7],
 	];
+
+	if (version>len(qr_properties))
+		echo(str("WARNING: version ", version, " is not implemented"));
 	
 	function qr_get_props_by_version(version)=
 		qr_properties[version-1];
@@ -93,6 +102,28 @@ module quick_response(bytes, version=1, ecc_level=2, mask=0, mark=1, space=0, qu
 	rem_bits=qr_prop_remainder(props);
 	
 	echo(str("DEBUG version=", version, " dims=", dims, " #align=", align_count, " size=", size, " remainder=", rem_bits));
+
+	//precomputed BCH remainders for the 32 different
+	//format codes (BCH 15,5 with poly 1335)
+	bch_1335 =
+	[
+		  0,311,622,857,491,220,901, 690,
+		982,737,440,143,573,778, 83, 356,
+		667,940,245,450,880,583,286,  41,
+		333,122,803,532,166,401,712,1023
+	];
+
+	format_ecc=bch_1335[xor(ecc_level,1)*8+mask];
+	format_info =
+	[
+		bit(format_ecc,0),bit(format_ecc,1),bit(format_ecc,2),
+		bit(format_ecc,3),bit(format_ecc,4),bit(format_ecc,5),
+		bit(format_ecc,6),bit(format_ecc,7),bit(format_ecc,8),
+		bit(format_ecc,9),
+		bit(mask,0),bit(mask,1),bit(mask,2),
+		!bit(ecc_level,0),bit(ecc_level,1),
+	];
+	//echo(str("DEBUG format info=",format_info));
 
 	//finder pattern
 	function finder(M,S) = [
@@ -390,6 +421,59 @@ module quick_response(bytes, version=1, ecc_level=2, mask=0, mark=1, space=0, qu
 		}
 	}
 
+	//draws the format patterns around the edge
+	//of the finder patterns
+	module format_patterns() {
+		//bit n of format info
+		function fi(n) =
+			((n==1) || (n==4) || (n==10) || (n==12) || (n==14))?
+				format_info[n]?space:mark:
+				format_info[n]?mark:space;
+
+		//format chunk 1
+		translate([8,dims-6])
+			2dbitmap([
+				[fi(0)],
+				[fi(1)],
+				[fi(2)],
+				[fi(3)],
+				[fi(4)],
+				[fi(5)]
+			]);
+
+		//format chunk 2
+		translate([7,dims-9])
+			2dbitmap([
+				[undef,fi(6)],
+				[fi(8),fi(7)]
+			]);
+
+		//format chunk 3
+		translate([0,dims-9])
+			2dbitmap([
+				[fi(14),fi(13),fi(12),fi(11),fi(10),fi(9)]
+			]);
+
+		//format chunk 4
+		translate([dims-8,dims-9])
+			2dbitmap([
+				[fi(7),fi(6),fi(5),fi(4),fi(3),fi(2),fi(1),fi(0)]
+			]);
+
+		//format chunk 5
+		translate([8,0])
+			2dbitmap([
+				[mark],
+				[fi(8)],
+				[fi(9)],
+				[fi(10)],
+				[fi(11)],
+				[fi(12)],
+				[fi(13)],
+				[fi(14)]
+			]);
+	}
+
 	//draw the symbol
 	translate([4,4])
 	{
@@ -436,17 +520,8 @@ module quick_response(bytes, version=1, ecc_level=2, mask=0, mark=1, space=0, qu
 		translate([dims,-4])
 			2dbitmap([for (i=[0:dims+7]) [for (j=[0:3]) quiet_zone]]);
 
-		//placeholder format patterns
-		translate([0,dims-9])
-			2dbitmap([[for (i=[0:5]) quiet_zone]]);
-		translate([dims-8,dims-9])
-			2dbitmap([[for (i=[0:7]) quiet_zone]]);
-		translate([8,0])
-			2dbitmap([for (i=[0:7]) [quiet_zone]]);
-		translate([8,dims-6])
-			2dbitmap([for (i=[0:5]) [quiet_zone]]);
-		translate([7,dims-9])
-			2dbitmap([[0,quiet_zone],[quiet_zone,quiet_zone]]);
+		//draw the format patterns
+		format_patterns();
 	}
 }
 
@@ -454,6 +529,6 @@ module quick_response(bytes, version=1, ecc_level=2, mask=0, mark=1, space=0, qu
 quick_response(
 //	[for (i=[0:171]) 193],
 	[for (i=[0:171]) 0],
-	version=3, mask=7,
+	version=3, mask=7, ecc_level=0,
 	mark=[.8,.2,.2,.4], space=[.8,.8,1,.4], quiet_zone=[.2,.2,.2,.1]
 );
