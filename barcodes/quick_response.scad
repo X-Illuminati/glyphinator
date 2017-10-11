@@ -508,9 +508,18 @@ module quick_response(bytes, version=1, ecc_level=2, mask=0, mark=1, space=0, qu
 
 /* Examples */
 quick_response(
-//	[for (i=[0:171]) 193],
-	concat([qr_nibble(15), qr_nibble(0), qr_nibble(15)],
-		[for (i=[0:170]) 0]),
-	version=3, mask=1, ecc_level=0,
-	mark=[.8,.2,.2,.4], space=[.8,.8,1,.4], quiet_zone=[.2,.2,.2,.1]
-);
+	concat(
+		qr_compact_nibbles([
+			qr_nibble(4), //byte mode
+			4,            //length
+			86,101,114,49 //ASCII "Ver1"
+		]),
+		[
+			236,17,236,   //padding bytes
+			150,106,201,  //ecc bytes
+			175,226,23,128,154,76,96,
+			209,69,45,171,227,182,8
+		]
+	),
+	version=1, mask=1, ecc_level=3,
+	mark="black");
