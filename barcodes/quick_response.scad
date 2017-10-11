@@ -1,6 +1,6 @@
 /*****************************************************************************
- * Quick Response Code Library
- * Generates Quick Response code 2D barcodes
+ * Quick Response Library
+ * Generates Quick Response 2D barcodes
  *****************************************************************************
  * Copyright 2017 Chris Baker
  *
@@ -23,27 +23,32 @@
  * Library Dependencies:
  * - util/bitlib.scad
  * - util/bitmap.scad
+ * - util/quick_response-util.scad
  *
  * API:
- *   quick_response(bytes, mark=1, space=0, quiet_zone=0)
+ *   quick_response(bytes, version=1, ecc_level=2, mask=0,
+ *     mark=1, space=0, quiet_zone=0)
+ *     TODO
  *
  * TODO:
- * - ECC calculation
  * - Data encoding
+ * - Determine symbol version automatically
+ * - ECC calculation
  * - Larger sizes
  *
  *****************************************************************************/
 use <../util/bitlib.scad>
 use <../util/bitmap.scad>
+use <../util/quick_response-util.scad>
 
 /*
- * quick_response - Generate a Quick Response code
+ * quick_response - Generate a Quick Response symbol
  *
  * bytes - data bytes to encode
+ *
  * version - 1..40 - determines symbol size
  * ecc_level - determines ratio of ecc:data bytes
  *   0=Low, 1=Mid, 2=Quality, 3=High
- *
  * mask - mask pattern applied on data/ecc bytes
  *   0=checkerboard (fine),
  *   1=rows,
@@ -68,32 +73,8 @@ module quick_response(bytes, version=1, ecc_level=2, mask=0, mark=1, space=0, qu
 	if ((mask<0) || (mask>7))
 		echo(str("ERROR: mask ", mask, " is invalid"));
 
-	qr_properties = [
-		/*ver- sz,#a, #cw,rem,#L, #M, #Q, #H*/
-		[/*1*/ 21, 0,  26,  0],
-		[/*2*/ 25, 1,  44,  7],
-		[/*3*/ 29, 1,  70,  7, 15, 26, 36, 44],
-		[/*4*/ 33, 1, 100,  7],
-		[/*5*/ 37, 1, 134,  7],
-		[/*6*/ 41, 1, 172,  7],
-	];
-
-	if (version>len(qr_properties))
+	if (version>6)
 		echo(str("WARNING: version ", version, " is not implemented"));
-	
-	function qr_get_props_by_version(version)=
-		qr_properties[version-1];
-
-	function qr_prop_dimension(properties)=properties[0];
-	function qr_prop_align_count(properties)=properties[1];
-	function qr_prop_total_size(properties)=properties[2];
-	function qr_prop_remainder(properties)=properties[3];
-	function qr_prop_ecc_size(properties, ecc_level)=
-		((ecc_level<0) || (ecc_level>3))?undef:
-		properties[4+ecc_level];
-	function qr_prop_data_size(properties, ecc_level)=
-		((ecc_level<0) || (ecc_level>3))?undef:
-		qr_prop_total_size(properties)-qr_prop_ecc_size(properties, ecc_level);
 
 	props=qr_get_props_by_version(version);
 	dims=qr_prop_dimension(props);
@@ -310,7 +291,7 @@ module quick_response(bytes, version=1, ecc_level=2, mask=0, mark=1, space=0, qu
 			(mask==5)?(x*_y)%2+(x*_y)%3:
 			(mask==6)?((x*_y)%2+(x*_y)%3)%2:
 			(mask==7)?((x+_y)%2+(x*_y)%3)%2:
-			0)?b:!b;
+			true)?b:!b;
 
 	//run the 2d bitmap, bm, through the mask
 	//process and then draw it at the desired x,y
