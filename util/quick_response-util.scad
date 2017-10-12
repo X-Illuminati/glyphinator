@@ -23,17 +23,21 @@
  * "true".
  *
  * API:
+ *   qr_pad(data, data_size)
+ *     Pad data up to data_size bytes.
+ *     Starts with an EOM nibble, compacts other nibbles.
+ *
+ *   qr_get_props_by_version(version)
+ *     Get a property vector based on the targetted symbol version.
+ *     See getter functions below to interpret this property vector.
+ *
  *   qr_nibble(x)
  *     Return value x represented as a 4-bit nibble.
  *
  *   qr_compact_nibbles(data)
  *     Convert the data vector of mixed bytes and nibbles into a vector of
- *     bytes only. If there are an odd number of nibbles, a final 0 nibble
- *     will be appended to the end to pad out the final byte.
- *
- *   qr_get_props_by_version(version)
- *     Get a property vector based on the targetted symbol version.
- *     See getter functions below to interpret this property vector.
+ *     bytes only. If there are an odd number of total nibbles, the final
+ *     value in the returned vector will be an unpadded nibble.
  *
  * Getter Functions for Use with Property Vector:
  *   qr_prop_total_size(properties) - return number of total codewords
@@ -166,14 +170,15 @@ function qr_nibbles2byte(a,b) =
  * qr_compact_nibbles
  * Take a vector of mixed bytes and nibbles and compact it
  * down into a vector of only bytes.
- * A 0-padding nibble will be added at the end if necessary.
+ * If there are an odd number of total nibbles, the final
+ * value in the returned vector will be an unpadded nibble.
  *
  * data - data vector composed of mixed byte values
  *   and negative nibble values created with qr_nibble()
  */
 function qr_compact_nibbles(data, i=0, carry=0) =
 	(i>=len(data))? //terminate recursion
-		carry?[qr_nibbles2byte(carry,undef)]:[]:
+		carry?[carry]:[]:
 	(carry)? // carry-in nibble
 		let(
 			next=qr_byte2nibbles(data[i]),
@@ -184,20 +189,25 @@ function qr_compact_nibbles(data, i=0, carry=0) =
 		let(
 			next=qr_byte2nibbles(data[i+1]),
 			remainder=(len(next)==2)?next[1]:undef,
-			value=qr_nibbles2byte(data[i], next[0])
+			value=(undef==next)?data[i]:qr_nibbles2byte(data[i], next[0])
 		) concat(value, qr_compact_nibbles(data, i+2, remainder)):
 	// else - data[i] is already a byte and no carry-in
 	concat(data[i], qr_compact_nibbles(data,i+1));
 
 echo("*** qr_compact_nibbles() testcases ***");
 echo(qr_compact_nibbles([0])==[0]); //0x00
-echo(qr_compact_nibbles([qr_nibble(8)])==[128]); //0x8.
+echo(qr_compact_nibbles([qr_nibble(8)])==[qr_nibble(8)]); //0x8.
 echo(qr_compact_nibbles([qr_nibble(8), qr_nibble(1)])==[129]); //0x81
-echo(qr_compact_nibbles([qr_nibble(0), 70, qr_nibble(2), qr_nibble(15), 4])==[4,98,240,64]); //0x0462F04.
+echo(qr_compact_nibbles([qr_nibble(0), 70, 4, 51, qr_nibble(3)])==[4,96,67,51]); //0x04604333
+echo(qr_compact_nibbles([70, 4, 51, qr_nibble(3)])==[70, 4, 51, qr_nibble(3)]); //0x4604333.
+echo( //0x0462F04.
+	qr_compact_nibbles(
+		[qr_nibble(0), 70, qr_nibble(2), qr_nibble(15), 4])
+	==[4,98,240,qr_nibble(4)]);
 echo( //0x00046233F04.
 	qr_compact_nibbles(
 		[0, qr_nibble(0), 70, qr_nibble(2), 51, qr_nibble(15), 4])
-	==[0,4,98,51,240,64]);
+	==[0,4,98,51,240,qr_nibble(4)]);
 echo( //0x0004623F0433
 	qr_compact_nibbles(
 		[0, qr_nibble(0), 70, qr_nibble(2), qr_nibble(3), qr_nibble(15), 4, 51])
@@ -206,3 +216,56 @@ echo( //0x146330C204172F
 	qr_compact_nibbles(
 		[qr_nibble(1), 70, 51, 12, qr_nibble(2), 4, 23, 47])
 	==[20,99,48,194,4,23,47]);
+
+EOM=qr_nibble(0);
+
+/*
+ * qr_pad - pad a qr_nibble/byte vector up to an expected size
+ *
+ * data - the vector of initial data
+ *
+ * data_size - the size to pad the data vector up to
+ *
+ * returns undef if the length of the data ends up being > data_size
+ */
+function qr_pad(data, data_size) = (data_size==undef)?undef:
+	let(d=qr_compact_nibbles(concat(data,[EOM])), s=len(d))
+		((s==data_size+1)&&(d[s-1]==EOM))? //special case - EOM unneeded
+			[for (i=[0:s-2]) d[i]]:
+		(s>data_size)?undef: //too long
+		let(offset=s%2) [
+			for (i=[0:data_size-1])
+				((i==s-1)&&(d[i]<0))?
+					qr_nibbles2byte(d[i],undef):
+				(i<s)?d[i]:
+				((i-s)%2==0)?236:17
+		];
+
+echo("*** qr_pad() testcases ***");
+echo(qr_pad([1,2,3,4,5],4)==undef);
+echo(qr_pad([0,qr_nibble(1),2,qr_nibble(3),4,qr_nibble(5)],4)==undef);
+echo(qr_pad([0])==undef);
+
+echo(qr_pad([],10)==[0,236,17,236,17,236,17,236,17,236]);
+echo(qr_pad([1],10)==[1,0,236,17,236,17,236,17,236,17]);
+echo(qr_pad([1,2],10)==[1,2,0,236,17,236,17,236,17,236]);
+echo(qr_pad([1,2,3],10)==[1,2,3,0,236,17,236,17,236,17]);
+echo(qr_pad([1,2,3,4],10)==[1,2,3,4,0,236,17,236,17,236]);
+echo(qr_pad([1,2,3,4,5,6,7,8],10)==[1,2,3,4,5,6,7,8,0,236]);
+echo(qr_pad([1,2,3,4,5,6,7,8,9],10)==[1,2,3,4,5,6,7,8,9,0]);
+echo(qr_pad([1,2,3,4,5,6,7,8,9,10],10)==[1,2,3,4,5,6,7,8,9,10]);
+
+echo(qr_pad([qr_nibble(0),1,2,3,qr_nibble(4)],4)==[0,16,32,52]);
+echo(qr_pad([qr_nibble(0),1,2,3,qr_nibble(4)],5)==[0,16,32,52,0]);
+echo(qr_pad([qr_nibble(0),1,2,3,qr_nibble(4)],6)==[0,16,32,52,0,236]);
+echo(qr_pad([qr_nibble(0),1,2,3,qr_nibble(4)],7)==[0,16,32,52,0,236,17]);
+echo(qr_pad([qr_nibble(0),1,2,3,qr_nibble(4)],8)==[0,16,32,52,0,236,17,236]);
+
+echo(qr_pad([qr_nibble(1),2,qr_nibble(3),4,qr_nibble(5)],4)
+	==[16,35,4,80]);
+echo(qr_pad([qr_nibble(1),2,qr_nibble(3),4,qr_nibble(5)],5)
+	==[16,35,4,80,236]);
+echo(qr_pad([qr_nibble(1),2,qr_nibble(3),4,qr_nibble(5)],6)
+	==[16,35,4,80,236,17]);
+echo(qr_pad([qr_nibble(1),2,qr_nibble(3),4,qr_nibble(5)],7)
+	==[16,35,4,80,236,17,236]);

@@ -459,7 +459,7 @@ module quick_response(bytes, version=1, ecc_level=2, mask=0, mark=1, space=0, qu
 	translate([4,4])
 	{
 		//draw the data region
-		quick_response_inner(qr_compact_nibbles(bytes), x=dims-2);
+		quick_response_inner(bytes, x=dims-2);
 
 		//draw the finder patterns
 		2dbitmap(finder(mark, space));
@@ -509,13 +509,12 @@ module quick_response(bytes, version=1, ecc_level=2, mask=0, mark=1, space=0, qu
 /* Examples */
 quick_response(
 	concat(
-		qr_compact_nibbles([
+		qr_pad([
 			qr_nibble(4), //byte mode
 			4,            //length
 			86,101,114,49 //ASCII "Ver1"
-		]),
+		], 9),
 		[
-			236,17,236,   //padding bytes
 			150,106,201,  //ecc bytes
 			175,226,23,128,154,76,96,
 			209,69,45,171,227,182,8
