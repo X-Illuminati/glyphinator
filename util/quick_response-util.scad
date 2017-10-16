@@ -19,6 +19,7 @@
  *****************************************************************************
  * Usage:
  * Include this file with the "use" tag.
+ * Depends on the reed-solomon-quick_response.scad library.
  * When run on its own, all echo statements in this library should print
  * "true".
  *
@@ -26,6 +27,13 @@
  *   qr_pad(data, data_size)
  *     Pad data up to data_size bytes.
  *     Starts with an EOM nibble, compacts other nibbles.
+ *
+ *   qr_ecc(data, version, ecc_level)
+ *     Calculate and append reed-solomon error correction bytes over the data
+ *     byte vector. The number of error correction bytes will be determined
+ *     by version and ecc_level.
+ *     The len(data) must be a particular size; use qr_pad() to pad up to the
+ *     nearest valid size.
  *
  *   qr_get_props_by_version(version)
  *     Get a property vector based on the targetted symbol version.
@@ -49,6 +57,7 @@
  *  - Change echos to asserts (future OpenSCAD version)
  *
  *****************************************************************************/
+use <reed-solomon-quick_response.scad>
 
 /*
 I'd like to keep all of the constants related to each
@@ -269,3 +278,26 @@ echo(qr_pad([qr_nibble(1),2,qr_nibble(3),4,qr_nibble(5)],6)
 	==[16,35,4,80,236,17]);
 echo(qr_pad([qr_nibble(1),2,qr_nibble(3),4,qr_nibble(5)],7)
 	==[16,35,4,80,236,17,236]);
+
+/*
+ * qr_ecc - append reed-solomon error correction bytes
+ *
+ * data - the vector of data bytes
+ * version - 1..40 - determines symbol size
+ * ecc_level - determines ratio of ecc:data bytes
+ *   0=Low, 1=Mid, 2=Quality, 3=High
+ */
+function qr_ecc(data, version, ecc_level=2) =
+	let(p=qr_get_props_by_version(version),
+		dcw=qr_prop_data_size(p, ecc_level),
+		ecw=qr_prop_ecc_size(p, ecc_level))
+		(ecw==undef || dcw==undef || dcw!=len(data))?undef:
+		concat(data,rs285_ecc(data,dcw,ecw));
+
+echo("*** qr_ecc() testcases ***");
+echo(qr_ecc()==undef);
+echo(qr_ecc([10,20])==undef);
+echo(qr_ecc([10,20], version=1, ecc_level=4)==undef);
+echo(qr_ecc([10,20], version=1)==undef);
+echo(qr_ecc([64,69,102,87,35,16,236,17,236], version=1, ecc_level=3)
+	==[64,69,102,87,35,16,236,17,236,150,106,201,175,226,23,128,154,76,96,209,69,45,171,227,182,8]);

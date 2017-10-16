@@ -24,6 +24,8 @@
  * - util/bitlib.scad
  * - util/bitmap.scad
  * - util/quick_response-util.scad
+ *   - util/reed-solomon-quick_response.scad
+ *     - util/bitlib.scad
  *
  * API:
  *   quick_response(bytes, version=1, ecc_level=2, mask=0,
@@ -31,9 +33,9 @@
  *     TODO
  *
  * TODO:
+ * - ECC block interleaving
  * - Data encoding
  * - Determine symbol version automatically
- * - ECC calculation
  * - Larger sizes
  *
  *****************************************************************************/
@@ -507,18 +509,48 @@ module quick_response(bytes, version=1, ecc_level=2, mask=0, mark=1, space=0, qu
 }
 
 /* Examples */
-quick_response(
-	concat(
-		qr_pad([
-			qr_nibble(4), //byte mode
-			4,            //length
-			86,101,114,49 //ASCII "Ver1"
-		], 9),
-		[
-			150,106,201,  //ecc bytes
-			175,226,23,128,154,76,96,
-			209,69,45,171,227,182,8
-		]
-	),
-	version=1, mask=1, ecc_level=3,
-	mark="black");
+example=3;
+//example 1 - Version 1, Mask 1, ECC High - From https://en.wikipedia.org/wiki/File:Qr-1.png
+//example 2 - Version 2, Mask 2, ECC High - From https://en.wikipedia.org/wiki/File:Qr-2.png
+//example 3 - Version 3, Mask 7, ECC Low  - From https://en.wikipedia.org/wiki/File:QRCode-1-Intro.png
+
+if (example==1)
+	quick_response(
+		qr_ecc(
+			qr_pad([
+				qr_nibble(4), //byte mode
+				4,            //length
+				86,101,114,49 //ASCII "Ver1"
+			], 9), //26-{7,10,13,17}
+			version=1, ecc_level=3),
+		version=1, mask=1, ecc_level=3,
+		mark="black");
+
+if (example==2)
+	quick_response(
+		qr_ecc(
+			qr_pad([
+				qr_nibble(4), //byte mode
+				9,            //length
+				86,101,114,   //ASCII "Version 2"
+				115,105,111,110,32,50
+			], 16), //44-{10,16,22,28}
+			version=2, ecc_level=3),
+		version=2, mask=2, ecc_level=3,
+		mark="black");
+
+if (example==3)
+	quick_response(
+		qr_ecc(
+			qr_pad([
+				qr_nibble(4), //byte mode
+				42,           //length
+				//ASCII "Mr. Watson, come here - I want to see you."
+				77,114,46,32,87,97,116,115,111,110,44,
+				32,99,111,109,101,32,104,101,114,101,
+				32,45,32,73,32,119,97,110,116,32,116,
+				111,32,115,101,101,32,121,111,117,46
+			], 55), //70-{15,26,36,44}
+			version=3, ecc_level=0),
+		version=3, mask=7, ecc_level=0,
+		mark="black");
