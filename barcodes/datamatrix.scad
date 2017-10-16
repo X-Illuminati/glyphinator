@@ -24,7 +24,7 @@
  * - util/bitlib.scad
  * - util/bitmap.scad
  * - util/datamatrix-util.scad
- *   - util/reed-solomon.scad
+ *   - util/reed-solomon-datamatrix.scad
  *     - util/bitlib.scad
  *
  * API:

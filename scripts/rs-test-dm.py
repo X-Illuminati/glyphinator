@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 ###############################################################################
-# rs-test.py -- reed solomon test calculator
+# rs-test-dm.py -- reed solomon test calculator for datamatrix
 ###############################################################################
 # Copyright 2017 Chris Baker
 #

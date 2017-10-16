@@ -19,7 +19,7 @@
  *****************************************************************************
  * Usage:
  * Include this file with the "use" tag.
- * Depends on th reed-solomon.scad library.
+ * Depends on the reed-solomon-datamatrix.scad library.
  * When run on its own, all echo statements in this library should print
  * "true".
  *
@@ -59,7 +59,7 @@
  *  - Change echos to asserts (future OpenSCAD version)
  *
  *****************************************************************************/
-use <reed-solomon.scad>
+use <reed-solomon-datamatrix.scad>
 
 /*
 I'd like to keep all of the constants related to each
@@ -231,7 +231,7 @@ function dm_ecc(data) =
 		dcw=dm_prop_data_size(p),
 		ecw=dm_prop_ecc_size(p))
 		(dcw==undef || dcw!=len(data))?undef:
-		concat(data,rs_ecc(data,dcw,ecw));
+		concat(data,rs301_ecc(data,dcw,ecw));
 
 echo("*** dm_ecc() testcases ***");
 echo(dm_ecc()==undef);
