@@ -24,9 +24,11 @@
  * "true".
  *
  * API:
- *   qr_pad(data, data_size)
- *     Pad data up to data_size bytes.
+ *   qr_pad(data, ecc_level, data_size=undef)
+ *     Pad the data vector up to data_size bytes.
  *     Starts with an EOM nibble, compacts other nibbles.
+ *     If data_size is left undefined, an appropriate value will be calculated
+ *     from data and ecc_level (so ecc_level must be provided in this case).
  *
  *   qr_ecc(data, version, ecc_level)
  *     Calculate and append reed-solomon error correction bytes over the data
@@ -119,6 +121,38 @@ echo(qr_get_props_by_version(false)==undef);
 echo(qr_get_props_by_version(undef)==undef);
 echo(qr_get_props_by_version(7)==undef); //will need adjustment in the future
 
+/*
+ * qr_get_props_by_data_size
+ * Return a row from dm_prop_table based data size.
+ * Recursively looks up the row with dcw >= data_size.
+ *
+ * data_size - number of data codewords
+ * ecc_level - determines ratio of ecc:data bytes
+ *   0=Low, 1=Mid, 2=Quality, 3=High
+ */
+function qr_get_props_by_data_size(data_size, ecc_level, i=0) =
+	(data_size<0)?undef:
+	(data_size==true)?undef:
+	(data_size==false)?undef:
+	let(p=qr_prop_table[i])
+		(p==undef)?undef:
+		(qr_prop_data_size(p, ecc_level)>=data_size)?p:
+		qr_get_props_by_data_size(data_size, ecc_level, i+1);
+
+echo("*** qr_get_props_by_data_size() testcases ***");
+echo(qr_get_props_by_data_size(-1, 0)==undef);
+echo(qr_get_props_by_data_size(0, 0)!=undef);
+echo(qr_get_props_by_data_size(1, 0)!=undef);
+echo(qr_get_props_by_data_size(136, 0)!=undef);
+echo(qr_get_props_by_data_size(0, -1)==undef);
+echo(qr_get_props_by_data_size(0, 1)!=undef);
+echo(qr_get_props_by_data_size(0, 2)!=undef);
+echo(qr_get_props_by_data_size(0, 3)!=undef);
+echo(qr_get_props_by_data_size(0, 4)==undef);
+echo(qr_get_props_by_data_size(true, 0)==undef);
+echo(qr_get_props_by_data_size(false, 0)==undef);
+echo(qr_get_props_by_data_size(137, 0)==undef); //will need adjustment in the future
+
 echo("*** combination testcases ***");
 echo(qr_prop_data_size(qr_get_props_by_version(1),3)==9);
 echo(qr_prop_data_size(qr_get_props_by_version(1),2)==13);
@@ -142,6 +176,22 @@ echo(qr_prop_ecc_size(qr_get_props_by_version(6), 3)==112);
 echo(qr_prop_ecc_size(qr_get_props_by_version(1), -1)==undef);
 echo(qr_prop_ecc_size(qr_get_props_by_version(1), 4)==undef);
 echo(qr_prop_ecc_size(qr_get_props_by_version(1), undef)==undef);
+echo(qr_prop_data_size(qr_get_props_by_data_size(19,0), 0)==19);
+echo(qr_prop_data_size(qr_get_props_by_data_size(44,1), 1)==44);
+echo(qr_prop_data_size(qr_get_props_by_data_size(48,2), 2)==48);
+echo(qr_prop_data_size(qr_get_props_by_data_size(46,3), 3)==46);
+echo(qr_prop_data_size(qr_get_props_by_data_size(60,3), 3)==60);
+echo(qr_prop_total_size(qr_get_props_by_data_size(13,2))==26);
+echo(qr_prop_total_size(qr_get_props_by_data_size(26,3))==70);
+echo(qr_prop_total_size(qr_get_props_by_data_size(136,0))==172);
+echo(qr_prop_dimension(qr_get_props_by_data_size(16,1))==21);
+echo(qr_prop_dimension(qr_get_props_by_data_size(34,0))==25);
+echo(qr_prop_dimension(qr_get_props_by_data_size(76,2))==41);
+echo(qr_prop_ecc_size(qr_get_props_by_data_size(9,3), 3)==17);
+echo(qr_prop_ecc_size(qr_get_props_by_data_size(16,3), 3)==28);
+echo(qr_prop_ecc_size(qr_get_props_by_data_size(34,2), 2)==36);
+echo(qr_prop_ecc_size(qr_get_props_by_data_size(36,3), 3)==64);
+echo(qr_prop_ecc_size(qr_get_props_by_data_size(108,1), 1)==64);
 
 /*
  * qr_nibble
@@ -232,18 +282,37 @@ EOM=qr_nibble(0);
  * qr_pad - pad a qr_nibble/byte vector up to an expected size
  *
  * data - the vector of initial data
+
+ * ecc_level - determines ratio of ecc:data bytes
+ *   0=Low, 1=Mid, 2=Quality, 3=High
+ * data_size - (optional) the size to pad the data vector up to
+ *   if left undefined, a value will be calculated from data
  *
- * data_size - the size to pad the data vector up to
- *
+ * ecc_level must be provided unless data_size is provided
  * returns undef if the length of the data ends up being > data_size
  */
-function qr_pad(data, data_size) = (data_size==undef)?undef:
-	let(d=qr_compact_nibbles(concat(data,[EOM])), s=len(d))
-		((s==data_size+1)&&(d[s-1]==EOM))? //special case - EOM unneeded
+function qr_pad(data, ecc_level, data_size=undef) =
+	((ecc_level==undef) && (data_size==undef))?undef:
+	let(d=qr_compact_nibbles(
+			//check whether data already ends with EOM
+			(data[len(data)-1]==EOM)?
+				data:
+				concat(data,[EOM])),
+		s=len(d),
+		//determine number of data codewords
+		dcw=(data_size!=undef)?
+			data_size: //use data_size if provided
+			qr_prop_data_size(
+				qr_get_props_by_data_size(
+					(d[s-1]==EOM)?s-1:s, //final EOM byte is optional
+					ecc_level), ecc_level)
+	)
+		(dcw==undef)?undef: //lookup failure
+		((s==dcw+1)&&(d[s-1]==EOM))? //special case - EOM unneeded
 			[for (i=[0:s-2]) d[i]]:
-		(s>data_size)?undef: //too long
+		(s>dcw)?undef: //too long
 		let(offset=s%2) [
-			for (i=[0:data_size-1])
+			for (i=[0:dcw-1])
 				((i==s-1)&&(d[i]<0))?
 					qr_nibbles2byte(d[i],undef):
 				(i<s)?d[i]:
@@ -251,33 +320,55 @@ function qr_pad(data, data_size) = (data_size==undef)?undef:
 		];
 
 echo("*** qr_pad() testcases ***");
-echo(qr_pad([1,2,3,4,5],4)==undef);
-echo(qr_pad([0,qr_nibble(1),2,qr_nibble(3),4,qr_nibble(5)],4)==undef);
+echo(qr_pad([1,2,3,4,5],data_size=4)==undef);
+echo(qr_pad([1,2,3,4,5],0,data_size=4)==undef);
+echo(qr_pad([0,qr_nibble(1),2,qr_nibble(3),4,qr_nibble(5)],data_size=4)
+	==undef);
 echo(qr_pad([0])==undef);
+echo(qr_pad([0],0,4)==[0,0,236,17]);
+echo(qr_pad([for (i=[0:137]) i],0)==undef);
 
-echo(qr_pad([],10)==[0,236,17,236,17,236,17,236,17,236]);
-echo(qr_pad([1],10)==[1,0,236,17,236,17,236,17,236,17]);
-echo(qr_pad([1,2],10)==[1,2,0,236,17,236,17,236,17,236]);
-echo(qr_pad([1,2,3],10)==[1,2,3,0,236,17,236,17,236,17]);
-echo(qr_pad([1,2,3,4],10)==[1,2,3,4,0,236,17,236,17,236]);
-echo(qr_pad([1,2,3,4,5,6,7,8],10)==[1,2,3,4,5,6,7,8,0,236]);
-echo(qr_pad([1,2,3,4,5,6,7,8,9],10)==[1,2,3,4,5,6,7,8,9,0]);
-echo(qr_pad([1,2,3,4,5,6,7,8,9,10],10)==[1,2,3,4,5,6,7,8,9,10]);
+echo(qr_pad([],data_size=10)==[0,236,17,236,17,236,17,236,17,236]);
+echo(qr_pad([1],data_size=10)==[1,0,236,17,236,17,236,17,236,17]);
+echo(qr_pad([1,2],data_size=10)==[1,2,0,236,17,236,17,236,17,236]);
+echo(qr_pad([1,2,3],data_size=10)==[1,2,3,0,236,17,236,17,236,17]);
+echo(qr_pad([1,2,3,4],data_size=10)==[1,2,3,4,0,236,17,236,17,236]);
+echo(qr_pad([1,2,3,4,5,6,7,8],data_size=10)==[1,2,3,4,5,6,7,8,0,236]);
+echo(qr_pad([1,2,3,4,5,6,7,8,9],data_size=10)==[1,2,3,4,5,6,7,8,9,0]);
+echo(qr_pad([1,2,3,4,5,6,7,8,9,10],data_size=10)==[1,2,3,4,5,6,7,8,9,10]);
 
-echo(qr_pad([qr_nibble(0),1,2,3,qr_nibble(4)],4)==[0,16,32,52]);
-echo(qr_pad([qr_nibble(0),1,2,3,qr_nibble(4)],5)==[0,16,32,52,0]);
-echo(qr_pad([qr_nibble(0),1,2,3,qr_nibble(4)],6)==[0,16,32,52,0,236]);
-echo(qr_pad([qr_nibble(0),1,2,3,qr_nibble(4)],7)==[0,16,32,52,0,236,17]);
-echo(qr_pad([qr_nibble(0),1,2,3,qr_nibble(4)],8)==[0,16,32,52,0,236,17,236]);
-
-echo(qr_pad([qr_nibble(1),2,qr_nibble(3),4,qr_nibble(5)],4)
+echo(qr_pad([qr_nibble(0),1,2,3,qr_nibble(4)],data_size=4)==[0,16,32,52]);
+echo(qr_pad([qr_nibble(0),1,2,3,qr_nibble(4)],data_size=5)
+	==[0,16,32,52,0]);
+echo(qr_pad([qr_nibble(0),1,2,3,qr_nibble(4)],data_size=6)
+	==[0,16,32,52,0,236]);
+echo(qr_pad([qr_nibble(0),1,2,3,qr_nibble(4)],data_size=7)
+	==[0,16,32,52,0,236,17]);
+echo(qr_pad([qr_nibble(0),1,2,3,qr_nibble(4)],data_size=8)
+	==[0,16,32,52,0,236,17,236]);
+echo(qr_pad([qr_nibble(1),2,qr_nibble(3),4,qr_nibble(5)],data_size=4)
 	==[16,35,4,80]);
-echo(qr_pad([qr_nibble(1),2,qr_nibble(3),4,qr_nibble(5)],5)
+echo(qr_pad([qr_nibble(1),2,qr_nibble(3),4,qr_nibble(5)],data_size=5)
 	==[16,35,4,80,236]);
-echo(qr_pad([qr_nibble(1),2,qr_nibble(3),4,qr_nibble(5)],6)
+echo(qr_pad([qr_nibble(1),2,qr_nibble(3),4,qr_nibble(5)],data_size=6)
 	==[16,35,4,80,236,17]);
-echo(qr_pad([qr_nibble(1),2,qr_nibble(3),4,qr_nibble(5)],7)
+echo(qr_pad([qr_nibble(1),2,qr_nibble(3),4,qr_nibble(5)],data_size=7)
 	==[16,35,4,80,236,17,236]);
+
+echo(qr_pad([1,2,3,4,5,6,7,8,9], 3)==[1,2,3,4,5,6,7,8,9]);
+echo(qr_pad([1,2,3,4,5,6,7,8,9,10], 3)
+	==[1,2,3,4,5,6,7,8,9,10,0,236,17,236,17,236]);
+echo(qr_pad([1,2,3,4,5,6,7,8,9,10,11,12,13], 2)
+	==[1,2,3,4,5,6,7,8,9,10,11,12,13]);
+echo(qr_pad([1,2,3,4,5,6,7,8,9,10,11,12,13,14], 2)
+	==[1,2,3,4,5,6,7,8,9,10,11,12,13,14,0,236,17,236,17,236,17,236]);
+echo(qr_pad([qr_nibble(1),1,2,3,4,5,6,7,8], 3)
+	==[16,16,32,48,64,80,96,112,128]);
+echo(qr_pad([qr_nibble(1),1,2,3,4,5,6,7,8,9], 3)
+	==[16,16,32,48,64,80,96,112,128,144,236,17,236,17,236,17]);
+echo(qr_pad([qr_nibble(1),1,2,3,4,5,6,7,8,9,10,11,12], 2)
+	==[16,16,32,48,64,80,96,112,128,144,160,176,192]);
+echo(qr_pad([qr_nibble(1),1,2,3,4,5,6,7,8,9,10,11,12,13], 2)==[16,16,32,48,64,80,96,112,128,144,160,176,192,208,236,17,236,17,236,17,236,17]);
 
 /*
  * qr_ecc - append reed-solomon error correction bytes
