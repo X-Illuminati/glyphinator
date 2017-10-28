@@ -46,7 +46,7 @@
  *   dm_get_props_by_total_size(total_size)
  *     Get a property vector based on total_size.
  *     Returns properties appropriate for a DM symbol that has precisely
- *     total_size data and ecc codewords.
+ *     total_size combined data and ecc codewords.
  *     See getter functions below to interpret this property vector.
  *
  *  Getter Functions for Use with Property Vector:
@@ -153,7 +153,7 @@ echo(dm_get_props_by_total_size(44)==undef);
 echo(dm_get_props_by_total_size(72)!=undef);
 echo(dm_get_props_by_total_size(true)==undef);
 echo(dm_get_props_by_total_size(false)==undef);
-echo(dm_get_props_by_total_size(45)==undef); //will need adjustment in the future
+echo(dm_get_props_by_total_size(73)==undef); //will need adjustment in the future
 
 echo("*** combination testcases ***");
 echo(dm_prop_data_size(dm_get_props_by_data_size(0))==3);

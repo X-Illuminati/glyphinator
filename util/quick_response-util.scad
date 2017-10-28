@@ -41,6 +41,18 @@
  *     Get a property vector based on the targetted symbol version.
  *     See getter functions below to interpret this property vector.
  *
+ *   qr_get_props_by_data_size(data_size, ecc_level)
+ *     Get a property vector based on data_size.
+ *     Returns properties appropriate for a symbol that can contain at
+ *     least data_size data codewords at ecc_level ECC.
+ *     See getter functions below to interpret this property vector.
+ *
+ *   qr_get_props_by_total_size(total_size)
+ *     Get a property vector based on total_size.
+ *     Returns properties appropriate for a symbol that has precisely
+ *     total_size combined data and ecc codewords.
+ *     See getter functions below to interpret this property vector.
+ *
  *   qr_nibble(x)
  *     Return value x represented as a 4-bit nibble.
  *
@@ -50,6 +62,7 @@
  *     value in the returned vector will be an unpadded nibble.
  *
  * Getter Functions for Use with Property Vector:
+ *   qr_prop_version(properties) - return symbol version
  *   qr_prop_total_size(properties) - return number of total codewords
  *   qr_prop_ecc_size(properties, ecc_level) - return number of ecc codewords
  *   qr_prop_data_size(properties, ecc_level) - return number of data cw
@@ -75,13 +88,13 @@ This table is indexed by symbol version.
  - #H: number of ecc codewords (level high)
 */
 qr_prop_table = [
-	/*ver- sz,#a, #cw,rem, #L, #M, #Q,  #H*/
-	[/*1*/ 21, 0,  26,  0,  7, 10, 13,  17],
-	[/*2*/ 25, 1,  44,  7, 10, 16, 22,  28],
-	[/*3*/ 29, 1,  70,  7, 15, 26, 36,  44],
-	[/*4*/ 33, 1, 100,  7, 20, 36, 52,  64],
-	[/*5*/ 37, 1, 134,  7, 26, 48, 72,  88],
-	[/*6*/ 41, 1, 172,  7, 36, 64, 96, 112],
+	/*ver, sz,#a, #cw,rem, #L, #M, #Q,  #H*/
+	[   1, 21, 0,  26,  0,  7, 10, 13,  17],
+	[   2, 25, 1,  44,  7, 10, 16, 22,  28],
+	[   3, 29, 1,  70,  7, 15, 26, 36,  44],
+	[   4, 33, 1, 100,  7, 20, 36, 52,  64],
+	[   5, 37, 1, 134,  7, 26, 48, 72,  88],
+	[   6, 41, 1, 172,  7, 36, 64, 96, 112],
 ];
 
 /*
@@ -91,13 +104,14 @@ qr_prop_table = [
  * ecc_level - determines ratio of ecc:data bytes
  *   0=Low, 1=Mid, 2=Quality, 3=High
  */
-function qr_prop_dimension(properties)=properties[0];
-function qr_prop_align_count(properties)=properties[1];
-function qr_prop_total_size(properties)=properties[2];
-function qr_prop_remainder(properties)=properties[3];
+function qr_prop_version(properties)=properties[0];
+function qr_prop_dimension(properties)=properties[1];
+function qr_prop_align_count(properties)=properties[2];
+function qr_prop_total_size(properties)=properties[3];
+function qr_prop_remainder(properties)=properties[4];
 function qr_prop_ecc_size(properties, ecc_level)=
 	((ecc_level<0) || (ecc_level>3))?undef:
-	properties[4+ecc_level];
+	properties[5+ecc_level];
 function qr_prop_data_size(properties, ecc_level)=
 	((ecc_level<0) || (ecc_level>3))?undef:
 	qr_prop_total_size(properties)-qr_prop_ecc_size(properties, ecc_level);
@@ -123,8 +137,8 @@ echo(qr_get_props_by_version(7)==undef); //will need adjustment in the future
 
 /*
  * qr_get_props_by_data_size
- * Return a row from dm_prop_table based data size.
- * Recursively looks up the row with dcw >= data_size.
+ * Return a row from qr_prop_table based data size.
+ * Recursively looks up the row with (cw-ecc) >= data_size.
  *
  * data_size - number of data codewords
  * ecc_level - determines ratio of ecc:data bytes
@@ -153,12 +167,48 @@ echo(qr_get_props_by_data_size(true, 0)==undef);
 echo(qr_get_props_by_data_size(false, 0)==undef);
 echo(qr_get_props_by_data_size(137, 0)==undef); //will need adjustment in the future
 
+/*
+ * qr_get_props_by_total_size
+ * Return a row from qr_prop_table based total size.
+ * Recursively looks up the row with #cw == total_size.
+ *
+ * total_size - number of total codewords
+ */
+function qr_get_props_by_total_size(total_size, i=0) =
+	(total_size<26)?undef:
+	(total_size==true)?undef:
+	(total_size==false)?undef:
+	let(p=qr_prop_table[i])
+		(p==undef)?undef:
+		(qr_prop_total_size(p)==total_size)?p:
+		qr_get_props_by_total_size(total_size, i+1);
+
+echo("*** qr_get_props_by_total_size() testcases ***");
+echo(qr_get_props_by_total_size(-1)==undef);
+echo(qr_get_props_by_total_size(0)==undef);
+echo(qr_get_props_by_total_size(1)==undef);
+echo(qr_get_props_by_total_size(3)==undef);
+echo(qr_get_props_by_total_size(26)!=undef);
+echo(qr_get_props_by_total_size(29)==undef);
+echo(qr_get_props_by_total_size(44)!=undef);
+echo(qr_get_props_by_total_size(80)==undef);
+echo(qr_get_props_by_total_size(100)!=undef);
+echo(qr_get_props_by_total_size(172)!=undef);
+echo(qr_get_props_by_total_size(true)==undef);
+echo(qr_get_props_by_total_size(false)==undef);
+echo(qr_get_props_by_total_size(173)==undef); //will need adjustment in the future
+
+echo("*** qr_prop_version testcases ***");
+echo(len(qr_prop_table)==6); //reminder to check results below
+for (i=[0:len(qr_prop_table)-1])
+	echo(qr_prop_version(qr_prop_table[i])==(i+1));
+
 echo("*** combination testcases ***");
-echo(qr_prop_data_size(qr_get_props_by_version(1),3)==9);
-echo(qr_prop_data_size(qr_get_props_by_version(1),2)==13);
-echo(qr_prop_data_size(qr_get_props_by_version(2),2)==22);
-echo(qr_prop_data_size(qr_get_props_by_version(6),1)==108);
-echo(qr_prop_data_size(qr_get_props_by_version(6),0)==136);
+echo(qr_prop_data_size(qr_get_props_by_version(1), 3)==9);
+echo(qr_prop_data_size(qr_get_props_by_version(1), 2)==13);
+echo(qr_prop_data_size(qr_get_props_by_version(2), 2)==22);
+echo(qr_prop_data_size(qr_get_props_by_version(6), 1)==108);
+echo(qr_prop_data_size(qr_get_props_by_version(6), 0)==136);
 echo(qr_prop_data_size(qr_get_props_by_version(1), -1)==undef);
 echo(qr_prop_data_size(qr_get_props_by_version(1), 4)==undef);
 echo(qr_prop_data_size(qr_get_props_by_version(1), undef)==undef);
@@ -192,6 +242,26 @@ echo(qr_prop_ecc_size(qr_get_props_by_data_size(16,3), 3)==28);
 echo(qr_prop_ecc_size(qr_get_props_by_data_size(34,2), 2)==36);
 echo(qr_prop_ecc_size(qr_get_props_by_data_size(36,3), 3)==64);
 echo(qr_prop_ecc_size(qr_get_props_by_data_size(108,1), 1)==64);
+echo(qr_prop_data_size(qr_get_props_by_total_size(26), 1)==16);
+echo(qr_prop_data_size(qr_get_props_by_total_size(26), 3)==9);
+echo(qr_prop_data_size(qr_get_props_by_total_size(70), 2)==34);
+echo(qr_prop_data_size(qr_get_props_by_total_size(172), 0)==136);
+echo(qr_prop_data_size(qr_get_props_by_total_size(172), 3)==60);
+echo(qr_prop_total_size(qr_get_props_by_total_size(26))==26);
+echo(qr_prop_total_size(qr_get_props_by_total_size(70))==70);
+echo(qr_prop_total_size(qr_get_props_by_total_size(100))==100);
+echo(qr_prop_total_size(qr_get_props_by_total_size(172))==172);
+echo(qr_prop_dimension(qr_get_props_by_total_size(26))==21);
+echo(qr_prop_dimension(qr_get_props_by_total_size(134))==37);
+echo(qr_prop_dimension(qr_get_props_by_total_size(172))==41);
+echo(qr_prop_ecc_size(qr_get_props_by_total_size(26), 0)==7);
+echo(qr_prop_ecc_size(qr_get_props_by_total_size(26), 2)==13);
+echo(qr_prop_ecc_size(qr_get_props_by_total_size(44), 2)==22);
+echo(qr_prop_ecc_size(qr_get_props_by_total_size(172), 1)==64);
+echo(qr_prop_ecc_size(qr_get_props_by_total_size(172), 3)==112);
+echo(qr_prop_version(qr_get_props_by_total_size(26))==1);
+echo(qr_prop_version(qr_get_props_by_total_size(100))==4);
+echo(qr_prop_version(qr_get_props_by_total_size(172))==6);
 
 /*
  * qr_nibble
