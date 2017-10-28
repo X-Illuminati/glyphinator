@@ -28,15 +28,41 @@
  *     - util/bitlib.scad
  *
  * API:
- *   quick_response(bytes, version=1, ecc_level=2, mask=0,
- *     mark=1, space=0, quiet_zone=0)
- *     TODO
+ *   quick_response(bytes, ecc_level=2, mask=0, version=undef
+ *     mark=1, space=0, quiet_zone=0, expert_mode=false)
+ *     Generates a quick-response-style symbol with contents specified by the
+ *     bytes array and selectable ecc_level and mask pattern.
+ *     If necessary, version can be specified explicitly.
+ *     The mark, space, and quiet_zone parameters can be used to change the
+ *     appearance of the symbol. See the bitmap library for more details.
+ *     The expert_mode flag should only be used by experts.
+ *
+ * ECC Levels
+ *   These determine the number of correctable errors and the ratio of ecc
+ *   bytes to data bytes.
+ *     0=Low (~7.5% correctable)
+ *     1=Mid (~15% correctable)
+ *     2=Quality (~22.5% correctable)
+ *     3=High (~30% correctable)
+ *
+ * Mask Patterns
+ *   These XOR masks are applied over the data area of the symbo in order to
+ *   balance light/dark areas and avoid false-positive matches for the fixed
+ *   patterns.
+ *     0=checkerboard (fine)
+ *     1=rows
+ *     2=columns
+ *     3=diagonals
+ *     4=checkerboard (coarse)
+ *     5=* tiles
+ *     6=<> tiles
+ *     7=bowties
  *
  * TODO:
  * - ECC block interleaving
  * - Data encoding
- * - Determine symbol version automatically
  * - Larger sizes
+ * - Determine best mask automatically
  *
  *****************************************************************************/
 use <../util/bitlib.scad>
@@ -48,7 +74,6 @@ use <../util/quick_response-util.scad>
  *
  * bytes - data bytes to encode
  *
- * version - 1..40 - determines symbol size
  * ecc_level - determines ratio of ecc:data bytes
  *   0=Low, 1=Mid, 2=Quality, 3=High
  * mask - mask pattern applied on data/ecc bytes
@@ -61,30 +86,57 @@ use <../util/quick_response-util.scad>
  *   6=<> tiles,
  *   7=bowties
  *
+ * version - specify symbol version explicitly
  * mark - mark representation
  * space - space representation
  * quiet_zone - representation for the quiet zone
  *   (see documentation in bitmap.scad)
+ * expert_mode - only use this if you are an expert
  */
-module quick_response(bytes, version=1, ecc_level=2, mask=0, mark=1, space=0, quiet_zone=0)
+module quick_response(bytes, ecc_level=2, mask=0, version=undef,
+	mark=1, space=0, quiet_zone=0, expert_mode=false)
 {
-	if ((version<1) || (version>40))
+	if ((version!=undef) && (version<1 || version>40))
 		echo(str("ERROR: version ", version, " is invalid"));
 	if ((ecc_level<0) || (ecc_level>3))
 		echo(str("ERROR: ecc_level ", ecc_level, " is invalid"));
 	if ((mask<0) || (mask>7))
 		echo(str("ERROR: mask ", mask, " is invalid"));
 
-	if (version>6)
+	if (version && version>6)
 		echo(str("WARNING: version ", version, " is not implemented"));
 
-	props=qr_get_props_by_version(version);
+	props = (expert_mode)?
+		qr_get_props_by_total_size(len(bytes)):
+		(version==undef)?
+			qr_get_props_by_data_size(len(bytes), ecc_level):
+			qr_get_props_by_version(version);
+
+	if (props==undef)
+		if (expert_mode)
+			echo("ERROR: Are you sure you're an expert?");
+		else
+			echo(str("ERROR: Could not determine symbol properties. ",
+				len(bytes), " bytes of data might be an unsupported size."));
+
+	_version=qr_prop_version(props);
 	dims=qr_prop_dimension(props);
 	align_count=qr_prop_align_count(props);
 	size=qr_prop_total_size(props);
 	rem_bits=qr_prop_remainder(props);
+	data_size=qr_prop_data_size(props, ecc_level);
 	
-	echo(str("DEBUG version=", version, " dims=", dims, " #align=", align_count, " size=", size, " remainder=", rem_bits));
+	echo(str("DEBUG version=", _version, " dims=", dims, " #align=", align_count, " total size=", size, " data size=", data_size, " remainder=", rem_bits));
+
+	data_bytes=(expert_mode)?
+		bytes:
+		qr_ecc(
+			qr_pad(bytes, data_size=data_size),
+			version=_version, ecc_level=ecc_level);
+
+	if (qr_prop_ecc_size(props, ecc_level)>30)
+		echo(str("WARNING: ECC block interleaving not implemented for ",
+			"version ", _version, ", ecc_level ", ecc_level));
 
 	//precomputed BCH remainders for the 32 different
 	//format codes (BCH 15,5 with poly 1335)
@@ -461,7 +513,7 @@ module quick_response(bytes, version=1, ecc_level=2, mask=0, mark=1, space=0, qu
 	translate([4,4])
 	{
 		//draw the data region
-		quick_response_inner(bytes, x=dims-2);
+		quick_response_inner(data_bytes, x=dims-2);
 
 		//draw the finder patterns
 		2dbitmap(finder(mark, space));
@@ -516,41 +568,35 @@ example=3;
 
 if (example==1)
 	quick_response(
-		qr_ecc(
-			qr_pad([
-				qr_nibble(4), //byte mode
-				4,            //length
-				86,101,114,49 //ASCII "Ver1"
-			], ecc_level=3), //26-{7,10,13,17}
-			version=1, ecc_level=3),
-		version=1, mask=1, ecc_level=3,
+		[
+			qr_nibble(4), //byte mode
+			4,            //length
+			86,101,114,49 //ASCII "Ver1"
+		],
+		mask=1, ecc_level=3,
 		mark="black");
 
 if (example==2)
 	quick_response(
-		qr_ecc(
-			qr_pad([
-				qr_nibble(4), //byte mode
-				9,            //length
-				86,101,114,   //ASCII "Version 2"
-				115,105,111,110,32,50
-			], ecc_level=3), //44-{10,16,22,28}
-			version=2, ecc_level=3),
-		version=2, mask=2, ecc_level=3,
+		[
+			qr_nibble(4), //byte mode
+			9,            //length
+			86,101,114,   //ASCII "Version 2"
+			115,105,111,110,32,50
+		],
+		mask=2, ecc_level=3,
 		mark="black");
 
 if (example==3)
 	quick_response(
-		qr_ecc(
-			qr_pad([
-				qr_nibble(4), //byte mode
-				42,           //length
-				//ASCII "Mr. Watson, come here - I want to see you."
-				77,114,46,32,87,97,116,115,111,110,44,
-				32,99,111,109,101,32,104,101,114,101,
-				32,45,32,73,32,119,97,110,116,32,116,
-				111,32,115,101,101,32,121,111,117,46
-			], ecc_level=0), //70-{15,26,36,44}
-			version=3, ecc_level=0),
-		version=3, mask=7, ecc_level=0,
+		[
+			qr_nibble(4), //byte mode
+			42,           //length
+			//ASCII "Mr. Watson, come here - I want to see you."
+			77,114,46,32,87,97,116,115,111,110,44,
+			32,99,111,109,101,32,104,101,114,101,
+			32,45,32,73,32,119,97,110,116,32,116,
+			111,32,115,101,101,32,121,111,117,46
+		],
+		mask=7, ecc_level=0,
 		mark="black");
