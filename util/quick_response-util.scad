@@ -19,7 +19,7 @@
  *****************************************************************************
  * Usage:
  * Include this file with the "use" tag.
- * Depends on the reed-solomon-quick_response.scad library.
+ * Depends on the bitlib.scad and reed-solomon-quick_response.scad library.
  * When run on its own, all echo statements in this library should print
  * "true".
  *
@@ -53,13 +53,13 @@
  *     total_size combined data and ecc codewords.
  *     See getter functions below to interpret this property vector.
  *
- *   qr_nibble(x)
- *     Return value x represented as a 4-bit nibble.
+ *   qr_bitfield(value, bitlen)
+ *     Annotate value as being an n-bit word where n is bitlen.
  *
- *   qr_compact_nibbles(data)
- *     Convert the data vector of mixed bytes and nibbles into a vector of
- *     bytes only. If there are an odd number of total nibbles, the final
- *     value in the returned vector will be an unpadded nibble.
+ *   qr_compact_data(data)
+ *     Convert the data vector of mixed-length words into a vector of
+ *     bytes only. If the total number of bits has a remainder modulo 8, the
+ *     final value in the returned vector will be a qr_bitfield.
  *
  * Getter Functions for Use with Property Vector:
  *   qr_prop_version(properties) - return symbol version
@@ -72,6 +72,7 @@
  *  - Change echos to asserts (future OpenSCAD version)
  *
  *****************************************************************************/
+use <bitlib.scad>
 use <reed-solomon-quick_response.scad>
 
 /*
@@ -264,92 +265,137 @@ echo(qr_prop_version(qr_get_props_by_total_size(100))==4);
 echo(qr_prop_version(qr_get_props_by_total_size(172))==6);
 
 /*
- * qr_nibble
- * Encode a value as a nibble.
+ * qr_bitfield
+ * Annotate a value's length in bits.
  *
  * Within this framework most values represent bytes.
- * However, it is sometimes necessary to indicate a
- * 4-bit value. I am encoding these as negative numbers.
- * -16 is a special case since there is no -0.
+ * However, it is sometimes necessary to encode an n-bit
+ * word. I am encoding these as 2-tuples: [n, value].
+ *
+ * value - the value
+ * bitlen - the number of bits for the word
  */
-function qr_nibble(x) = (x==0)?-16:-x;
+function qr_bitfield(value, bitlen) = [bitlen,value];
 
-//Split a byte into [high nibble, low nibble]
-//If it is already a nibble return it as [nibble].
-function qr_byte2nibbles(x) =
+//helper to retrieve the length from a bitfield
+function qr_bitfield_len(x) =
 	(x==undef)?undef:
-	(x<0)?[x]: //already a nibble
-	[qr_nibble(floor(x/16)),qr_nibble(x%16)];
+	(len(x)==undef)?8: //assume byte
+	(len(x)==2)?x[0]:
+	undef;
 
-//Combine 2 nibbles into a byte value
-//a is high nibble, b is low nibble
-function qr_nibbles2byte(a,b) =
-	let(
-		v1 =
-			(a==undef)?0:
-			(a==-16)?0:
-			-a,
-		v2 =
-			(b==undef)?0:
-			(b==-16)?0:
-			-b
-		) v1*16+v2;
+//helper to retrieve the value from a bitfield
+function qr_bitfield_val(x) =
+	(x==undef)?undef:
+	(len(x)==undef)?x:
+	(len(x)==2)?x[1]:
+	undef;
+
+//Split a word into n-bits
+function qr_split_bits(x) =
+	(x==undef)?undef:
+	let (l = qr_bitfield_len(x), v = qr_bitfield_val(x))
+		[for (i=[l-1:-1:0]) [1, bit(v,i)?1:0]];
+
+echo("*** qr_split_bits() testcases ***");
+echo(qr_split_bits(0)==[[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0]]);
+echo(qr_split_bits(1)==[[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,1]]);
+echo(qr_split_bits(128)==[[1,1],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0]]);
+echo(qr_split_bits(146)==[[1,1],[1,0],[1,0],[1,1],[1,0],[1,0],[1,1],[1,0]]);
+echo(qr_split_bits(qr_bitfield(1,8))==
+	[[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,1]]);
+echo(qr_split_bits(qr_bitfield(128,8))==
+	[[1,1],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0]]);
+echo(qr_split_bits(qr_bitfield(3,4))==[[1,0],[1,0],[1,1],[1,1]]);
+echo(qr_split_bits(qr_bitfield(8,4))==[[1,1],[1,0],[1,0],[1,0]]);
+echo(qr_split_bits(qr_bitfield(0,2))==[[1,0],[1,0]]);
+echo(qr_split_bits(qr_bitfield(3,2))==[[1,1],[1,1]]);
+
+//recursively combine several words into a bigger word
+function qr_combine_words(vec, i=0) =
+	let (
+		x=(i==(len(vec)-1))?
+			[0,0]:
+			qr_combine_words(vec, i+1),
+		y=(vec[i]==undef)?[0,0]:vec[i]
+	)
+		[
+			qr_bitfield_len(y)+qr_bitfield_len(x),
+			qr_bitfield_val(y)*
+				pow(2,qr_bitfield_len(x))+qr_bitfield_val(x)
+		];
+
+echo("*** qr_combine_words() testcases ***");
+echo(qr_combine_words([[3,5]])==[3,5]);
+echo(qr_combine_words([[3,3],[2,3]])==[5,15]);
+echo(qr_combine_words([[3,3],[0,0],[2,3]])==[5,15]);
+echo(qr_combine_words([[3,3],[2,3],undef])==[5,15]);
+echo(qr_combine_words(qr_split_bits(0))==qr_bitfield(0,8));
+echo(qr_combine_words(qr_split_bits(1))==qr_bitfield(1,8));
+echo(qr_combine_words(qr_split_bits(128))==qr_bitfield(128,8));
+echo(qr_combine_words(qr_split_bits(146))==qr_bitfield(146,8));
+echo(qr_combine_words(qr_split_bits(qr_bitfield(3,4)))==qr_bitfield(3,4));
+echo(qr_combine_words(qr_split_bits(qr_bitfield(8,4)))==qr_bitfield(8,4));
+echo(qr_combine_words(qr_split_bits(qr_bitfield(0,2)))==qr_bitfield(0,2));
+echo(qr_combine_words(qr_split_bits(qr_bitfield(3,2)))==qr_bitfield(3,2));
 
 /*
- * qr_compact_nibbles
- * Take a vector of mixed bytes and nibbles and compact it
+ * qr_compact_data
+ * Take a data vector of mixed-length words and compact it
  * down into a vector of only bytes.
- * If there are an odd number of total nibbles, the final
- * value in the returned vector will be an unpadded nibble.
+ * If total bitlen has a remainder modulo 8, then the final
+ * word will be a qr_bitfield.
  *
- * data - data vector composed of mixed byte values
- *   and negative nibble values created with qr_nibble()
+ * data - data vector composed of mixed-length words
+ *   These can be bare-values (interpreted as bytes) or
+ *   2-tuples created with qr_bitfield().
  */
-function qr_compact_nibbles(data, i=0, carry=0) =
-	(i>=len(data))? //terminate recursion
-		carry?[carry]:[]:
-	(carry)? // carry-in nibble
-		let(
-			next=qr_byte2nibbles(data[i]),
-			remainder=(len(next)==2)?next[1]:undef,
-			value=qr_nibbles2byte(carry, next[0])
-		) concat(value, qr_compact_nibbles(data, i+1, remainder)):
-	(data[i]<0)? //data[i] is a nibble
-		let(
-			next=qr_byte2nibbles(data[i+1]),
-			remainder=(len(next)==2)?next[1]:undef,
-			value=(undef==next)?data[i]:qr_nibbles2byte(data[i], next[0])
-		) concat(value, qr_compact_nibbles(data, i+2, remainder)):
-	// else - data[i] is already a byte and no carry-in
-	concat(data[i], qr_compact_nibbles(data,i+1));
+function qr_compact_data(data) =
+	let(bvec=[for (v=data, x=qr_split_bits(v)) x])
+	[
+		for (i=[0:8:len(bvec)-1])
+			let (bitfield=qr_combine_words(
+				[
+					bvec[i+0], bvec[i+1], bvec[i+2], bvec[i+3],
+					bvec[i+4], bvec[i+5], bvec[i+6], bvec[i+7]
+				])
+			)
+				(qr_bitfield_len(bitfield)==8)?
+					qr_bitfield_val(bitfield):
+					bitfield
+	];
 
-echo("*** qr_compact_nibbles() testcases ***");
-echo(qr_compact_nibbles([0])==[0]); //0x00
-echo(qr_compact_nibbles([qr_nibble(8)])==[qr_nibble(8)]); //0x8.
-echo(qr_compact_nibbles([qr_nibble(8), qr_nibble(1)])==[129]); //0x81
-echo(qr_compact_nibbles([qr_nibble(0), 70, 4, 51, qr_nibble(3)])==[4,96,67,51]); //0x04604333
-echo(qr_compact_nibbles([70, 4, 51, qr_nibble(3)])==[70, 4, 51, qr_nibble(3)]); //0x4604333.
+echo("*** qr_compact_data() testcases ***");
+echo(qr_compact_data([0])==[0]); //0x00
+echo(qr_compact_data([qr_bitfield(8,4)])==[qr_bitfield(8,4)]); //0x8.
+echo(qr_compact_data([qr_bitfield(8,4), qr_bitfield(1,4)])==[129]); //0x81
+echo(qr_compact_data([qr_bitfield(3,2), 128, qr_bitfield(1,1)]) //0xE02.
+	==[224,qr_bitfield(1,3)]);
+echo(qr_compact_data([qr_bitfield(0,4), 70, 4, 51, qr_bitfield(3,4)]) //0x04604333
+	==[4,96,67,51]);
+echo(qr_compact_data([70, 4, 51, qr_bitfield(3,4)]) //0x4604333.
+	==[70, 4, 51, qr_bitfield(3,4)]);
 echo( //0x0462F04.
-	qr_compact_nibbles(
-		[qr_nibble(0), 70, qr_nibble(2), qr_nibble(15), 4])
-	==[4,98,240,qr_nibble(4)]);
+	qr_compact_data(
+		[qr_bitfield(0,4), 70, qr_bitfield(2,4), qr_bitfield(15,4), 4])
+	==[4,98,240,qr_bitfield(4,4)]);
 echo( //0x00046233F04.
-	qr_compact_nibbles(
-		[0, qr_nibble(0), 70, qr_nibble(2), 51, qr_nibble(15), 4])
-	==[0,4,98,51,240,qr_nibble(4)]);
+	qr_compact_data(
+		[0, qr_bitfield(0,4), 70, qr_bitfield(2,4), 51, qr_bitfield(15,4), 4])
+	==[0,4,98,51,240,qr_bitfield(4,4)]);
 echo( //0x0004623F0433
-	qr_compact_nibbles(
-		[0, qr_nibble(0), 70, qr_nibble(2), qr_nibble(3), qr_nibble(15), 4, 51])
+	qr_compact_data(
+		[0, qr_bitfield(0,4), 70, qr_bitfield(2,4), qr_bitfield(3,4), qr_bitfield(15,4), 4, 51])
 	==[0,4,98,63,4,51]);
 echo( //0x146330C204172F
-	qr_compact_nibbles(
-		[qr_nibble(1), 70, 51, 12, qr_nibble(2), 4, 23, 47])
+	qr_compact_data(
+		[qr_bitfield(1,4), 70, 51, 12, qr_bitfield(2,4), 4, 23, 47])
 	==[20,99,48,194,4,23,47]);
 
-EOM=qr_nibble(0);
+EOM=qr_bitfield(0,4);
 
 /*
- * qr_pad - pad a qr_nibble/byte vector up to an expected size
+ * qr_pad - pad a data vector up to an expected size
  *
  * data - the vector of initial data
 
@@ -363,7 +409,7 @@ EOM=qr_nibble(0);
  */
 function qr_pad(data, ecc_level, data_size=undef) =
 	((ecc_level==undef) && (data_size==undef))?undef:
-	let(d=qr_compact_nibbles(
+	let(d=qr_compact_data(
 			//check whether data already ends with EOM
 			(data[len(data)-1]==EOM)?
 				data:
@@ -379,20 +425,23 @@ function qr_pad(data, ecc_level, data_size=undef) =
 	)
 		(dcw==undef)?undef: //lookup failure
 		((s==dcw+1)&&(d[s-1]==EOM))? //special case - EOM unneeded
-			[for (i=[0:s-2]) d[i]]:
+			[for (i=[0:s-2]) qr_bitfield_val(d[i])]:
 		(s>dcw)?undef: //too long
 		let(offset=s%2) [
 			for (i=[0:dcw-1])
-				((i==s-1)&&(d[i]<0))?
-					qr_nibbles2byte(d[i],undef):
-				(i<s)?d[i]:
+				((i==s-1)&&(qr_bitfield_len(d[i])!=8))?
+					//special case - pad out final byte with 0s
+					qr_bitfield_val(qr_combine_words(
+						[d[i], qr_bitfield(0, 8-qr_bitfield_len(d[i]))]
+					)):
+				(i<s)?qr_bitfield_val(d[i]):
 				((i-s)%2==0)?236:17
 		];
 
 echo("*** qr_pad() testcases ***");
 echo(qr_pad([1,2,3,4,5],data_size=4)==undef);
 echo(qr_pad([1,2,3,4,5],0,data_size=4)==undef);
-echo(qr_pad([0,qr_nibble(1),2,qr_nibble(3),4,qr_nibble(5)],data_size=4)
+echo(qr_pad([0,qr_bitfield(1,4),2,qr_bitfield(3,4),4,qr_bitfield(5,4)],data_size=4)
 	==undef);
 echo(qr_pad([0])==undef);
 echo(qr_pad([0],0,4)==[0,0,236,17]);
@@ -407,22 +456,22 @@ echo(qr_pad([1,2,3,4,5,6,7,8],data_size=10)==[1,2,3,4,5,6,7,8,0,236]);
 echo(qr_pad([1,2,3,4,5,6,7,8,9],data_size=10)==[1,2,3,4,5,6,7,8,9,0]);
 echo(qr_pad([1,2,3,4,5,6,7,8,9,10],data_size=10)==[1,2,3,4,5,6,7,8,9,10]);
 
-echo(qr_pad([qr_nibble(0),1,2,3,qr_nibble(4)],data_size=4)==[0,16,32,52]);
-echo(qr_pad([qr_nibble(0),1,2,3,qr_nibble(4)],data_size=5)
+echo(qr_pad([qr_bitfield(0,4),1,2,3,qr_bitfield(4,4)],data_size=4)==[0,16,32,52]);
+echo(qr_pad([qr_bitfield(0,4),1,2,3,qr_bitfield(4,4)],data_size=5)
 	==[0,16,32,52,0]);
-echo(qr_pad([qr_nibble(0),1,2,3,qr_nibble(4)],data_size=6)
+echo(qr_pad([qr_bitfield(0,4),1,2,3,qr_bitfield(4,4)],data_size=6)
 	==[0,16,32,52,0,236]);
-echo(qr_pad([qr_nibble(0),1,2,3,qr_nibble(4)],data_size=7)
+echo(qr_pad([qr_bitfield(0,4),1,2,3,qr_bitfield(4,4)],data_size=7)
 	==[0,16,32,52,0,236,17]);
-echo(qr_pad([qr_nibble(0),1,2,3,qr_nibble(4)],data_size=8)
+echo(qr_pad([qr_bitfield(0,4),1,2,3,qr_bitfield(4,4)],data_size=8)
 	==[0,16,32,52,0,236,17,236]);
-echo(qr_pad([qr_nibble(1),2,qr_nibble(3),4,qr_nibble(5)],data_size=4)
+echo(qr_pad([qr_bitfield(1,4),2,qr_bitfield(3,4),4,qr_bitfield(5,4)],data_size=4)
 	==[16,35,4,80]);
-echo(qr_pad([qr_nibble(1),2,qr_nibble(3),4,qr_nibble(5)],data_size=5)
+echo(qr_pad([qr_bitfield(1,4),2,qr_bitfield(3,4),4,qr_bitfield(5,4)],data_size=5)
 	==[16,35,4,80,236]);
-echo(qr_pad([qr_nibble(1),2,qr_nibble(3),4,qr_nibble(5)],data_size=6)
+echo(qr_pad([qr_bitfield(1,4),2,qr_bitfield(3,4),4,qr_bitfield(5,4)],data_size=6)
 	==[16,35,4,80,236,17]);
-echo(qr_pad([qr_nibble(1),2,qr_nibble(3),4,qr_nibble(5)],data_size=7)
+echo(qr_pad([qr_bitfield(1,4),2,qr_bitfield(3,4),4,qr_bitfield(5,4)],data_size=7)
 	==[16,35,4,80,236,17,236]);
 
 echo(qr_pad([1,2,3,4,5,6,7,8,9], 3)==[1,2,3,4,5,6,7,8,9]);
@@ -432,13 +481,13 @@ echo(qr_pad([1,2,3,4,5,6,7,8,9,10,11,12,13], 2)
 	==[1,2,3,4,5,6,7,8,9,10,11,12,13]);
 echo(qr_pad([1,2,3,4,5,6,7,8,9,10,11,12,13,14], 2)
 	==[1,2,3,4,5,6,7,8,9,10,11,12,13,14,0,236,17,236,17,236,17,236]);
-echo(qr_pad([qr_nibble(1),1,2,3,4,5,6,7,8], 3)
+echo(qr_pad([qr_bitfield(1,4),1,2,3,4,5,6,7,8], 3)
 	==[16,16,32,48,64,80,96,112,128]);
-echo(qr_pad([qr_nibble(1),1,2,3,4,5,6,7,8,9], 3)
+echo(qr_pad([qr_bitfield(1,4),1,2,3,4,5,6,7,8,9], 3)
 	==[16,16,32,48,64,80,96,112,128,144,236,17,236,17,236,17]);
-echo(qr_pad([qr_nibble(1),1,2,3,4,5,6,7,8,9,10,11,12], 2)
+echo(qr_pad([qr_bitfield(1,4),1,2,3,4,5,6,7,8,9,10,11,12], 2)
 	==[16,16,32,48,64,80,96,112,128,144,160,176,192]);
-echo(qr_pad([qr_nibble(1),1,2,3,4,5,6,7,8,9,10,11,12,13], 2)==[16,16,32,48,64,80,96,112,128,144,160,176,192,208,236,17,236,17,236,17,236,17]);
+echo(qr_pad([qr_bitfield(1,4),1,2,3,4,5,6,7,8,9,10,11,12,13], 2)==[16,16,32,48,64,80,96,112,128,144,160,176,192,208,236,17,236,17,236,17,236,17]);
 
 /*
  * qr_ecc - append reed-solomon error correction bytes

@@ -24,6 +24,7 @@
  * - util/bitlib.scad
  * - util/bitmap.scad
  * - util/quick_response-util.scad
+ *   - util/bitlib.scad
  *   - util/reed-solomon-quick_response.scad
  *     - util/bitlib.scad
  *
@@ -569,7 +570,7 @@ example=3;
 if (example==1)
 	quick_response(
 		[
-			qr_nibble(4), //byte mode
+			qr_bitfield(4,4), //byte mode
 			4,            //length
 			86,101,114,49 //ASCII "Ver1"
 		],
@@ -579,7 +580,7 @@ if (example==1)
 if (example==2)
 	quick_response(
 		[
-			qr_nibble(4), //byte mode
+			qr_bitfield(4,4), //byte mode
 			9,            //length
 			86,101,114,   //ASCII "Version 2"
 			115,105,111,110,32,50
@@ -590,7 +591,7 @@ if (example==2)
 if (example==3)
 	quick_response(
 		[
-			qr_nibble(4), //byte mode
+			qr_bitfield(4,4), //byte mode
 			42,           //length
 			//ASCII "Mr. Watson, come here - I want to see you."
 			77,114,46,32,87,97,116,115,111,110,44,
