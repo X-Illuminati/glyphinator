@@ -21,6 +21,7 @@
  * Include this file with the "use" tag.
  *
  * Library Dependencies:
+ * - util/stringlib.scad
  * - util/bitlib.scad
  * - util/bitmap.scad
  * - util/datamatrix-util.scad
@@ -74,6 +75,7 @@
  *  - Add other encoding modes
  *
  *****************************************************************************/
+use <../util/stringlib.scad>
 use <../util/bitlib.scad>
 use <../util/bitmap.scad>
 use <../util/datamatrix-util.scad>
@@ -87,18 +89,6 @@ function fnc1_mode() = 232; // begin FNC1 (GS1-DataMatrix) encoding mode
 function text_mode() = 239; // begin text encoding mode
 function ascii_mode() = 254; // return to ASCII encoding mode
 function unused() = 0; // 0 is explicitly not used as a control code
-
-/*
- * ascii_to_dec - convert ASCII string to decimal vector
- *
- * a - the ASCII string to vectorize
- */
-function ascii_to_dec(a) =
-[
-	for (i = [0 : len(a) - 1])
-		let (val = search(a, "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\x7f"))
-			val[i]+1
-];
 
 //take the ASCII byte vector and convert it to
 //the DM ASCII encoding
@@ -125,7 +115,7 @@ function frobulate(vec, frob_digits=true, i=0) =
  * frob_digits - whether to compact digit pairs
  */
 function dm_ascii(string, frob_digits=true) =
-	let (vec=ascii_to_dec(string))
+	let (vec=ascii_to_vec(string))
 	frobulate(vec,frob_digits);
 
 function ascii_to_text(a) =
@@ -486,7 +476,7 @@ module data_matrix(bytes, mark=1, space=0, quiet_zone=0, expert_mode=false)
 //data_matrix(concat(c40_mode(),dm_c40("TELESI"),ascii_mode(),dm_ascii("S1")), mark="black");
 
 /* 16x16 - 12 data bytes, 12 ecc bytes */
-//data_matrix(dm_ascii("Wikipedia"), mark="black");
+data_matrix(dm_ascii("Wikipedia"), mark="black");
 
 /* 18x18 - 18 data bytes, 14 ecc bytes */
 //data_matrix(dm_ascii("Hourez Jonathan"), mark="black");
@@ -496,7 +486,7 @@ module data_matrix(bytes, mark=1, space=0, quiet_zone=0, expert_mode=false)
 
 /* 22x22 - 30 data bytes, 20 ecc bytes */
 //data_matrix(dm_ascii("http://www.idautomation.com"), mark="black");
-data_matrix(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a")), mark="black");
+//data_matrix(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a")), mark="black");
 /* same as above but using expert mode */
 //data_matrix(dm_ecc(dm_pad(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a")))), mark="black", expert_mode=true);
 /* same as above but adding padding and ecc completely manually */
