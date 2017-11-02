@@ -21,6 +21,7 @@
  * Include this file with the "use" tag.
  *
  * Library Dependencies:
+ * - util/stringlib.scad
  * - util/bitlib.scad
  * - util/bitmap.scad
  * - util/quick_response-util.scad
@@ -33,10 +34,28 @@
  *     mark=1, space=0, quiet_zone=0, expert_mode=false)
  *     Generates a quick-response-style symbol with contents specified by the
  *     bytes array and selectable ecc_level and mask pattern.
+ *     See "ECC Levels" and "Mask Patterns" below for more details.
  *     If necessary, version can be specified explicitly.
  *     The mark, space, and quiet_zone parameters can be used to change the
  *     appearance of the symbol. See the bitmap library for more details.
  *     The expert_mode flag should only be used by experts.
+ *
+ *   qr_bytes(data)
+ *     Encode the data byte vector as a quick response byte/binary TLV
+ *     vector.
+ *     See qr_byte_mode() below.
+ *     See ascii_to_vec() in util/stringlib.scad for ASCII conversion.
+ *
+ *   qr_numeric(digits)
+ *     Encode the digits vector as a quick response numeric TLV vector.
+ *     See qr_numeric_mode() below.
+ *     See atoi() in util/stringlib.scad for ASCII to int conversion.
+ *
+ *   qr_alphanum(string)
+ *     TODO: unimplemented
+ *     Encode the alpha-numeric string as a quick response alphanumeric TLV
+ *     vector.
+ *     See qr_alphanum_mode() below.
  *
  * ECC Levels
  *   These determine the number of correctable errors and the ratio of ecc
@@ -60,15 +79,69 @@
  *     7=bowties
  *
  * TODO:
+ * - Implement alphanumeric encoding
  * - ECC block interleaving
- * - Data encoding
  * - Larger sizes
  * - Determine best mask automatically
  *
  *****************************************************************************/
+use <../util/stringlib.scad>
 use <../util/bitlib.scad>
 use <../util/bitmap.scad>
 use <../util/quick_response-util.scad>
+
+function qr_EOM() = qr_bitfield(0,4); //end-of-message
+function qr_numeric_mode() = qr_bitfield(1,4); //begin numeric mode (followed by 10-bit length)
+function qr_alphanum_mode() = qr_bitfield(2,4); //begin alphanumeric mode (followed by 9-bit length)
+function qr_byte_mode() = qr_bitfield(4,4); //begin byte/binary mode (followed by 8-bit length)
+
+/*
+ * qr_bytes - encode byte vector in quick response byte/binary mode
+ *
+ * data - vector of data bytes to encode
+ *
+ */
+function qr_bytes(data) =
+	(len(data)==undef)?undef:
+	(len(data)>255)?undef:
+	concat (
+		[qr_byte_mode(), len(data)],
+		data
+	);
+
+/*
+ * qr_numeric - encode digit vector in quick response numeric mode
+ *
+ * digits - vector of digits to encode
+ *
+ */
+function qr_numeric(digits) =
+	(len(digits)==undef)?undef:
+	(len(digits)>1023)?undef:
+	concat (
+		[qr_numeric_mode(), qr_bitfield(len(digits),10)],
+		[
+			for (i=[0:3:len(digits)-1])
+			let
+			(
+				d1=digits[i],
+				d2=digits[i+1],
+				d3=digits[i+2],
+				len=(d1==undef)?0:
+					(d2==undef)?4:
+					(d3==undef)?7:
+					10,
+				v1=(d1>=0 && d1<=9)?d1:undef,
+				v2=(d2>=0 && d2<=9)?d2:undef,
+				v3=(d3>=0 && d3<=9)?d3:undef,
+				val=(v1==undef)?0:
+					(v2==undef)?v1:
+					(v3==undef)?v1*10+v2:
+					v1*100+v2*10+v3
+			)
+			qr_bitfield(val, len)
+		]
+	);
 
 /*
  * quick_response - Generate a Quick Response symbol
@@ -127,7 +200,7 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 	rem_bits=qr_prop_remainder(props);
 	data_size=qr_prop_data_size(props, ecc_level);
 	
-	echo(str("DEBUG version=", _version, " dims=", dims, " #align=", align_count, " total size=", size, " data size=", data_size, " remainder=", rem_bits));
+	//echo(str("DEBUG version=", _version, " dims=", dims, " #align=", align_count, " total size=", size, " data size=", data_size, " remainder=", rem_bits));
 
 	data_bytes=(expert_mode)?
 		bytes:
@@ -563,82 +636,74 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 
 /* Examples */
 example=4;
+//example 0 - unverified - test for numeric mode
 //example 1 - Version 1, Mask 1, ECC High - From https://en.wikipedia.org/wiki/File:Qr-1.png
 //example 2 - Version 2, Mask 2, ECC High - From https://en.wikipedia.org/wiki/File:Qr-2.png
 //example 3 - Version 3, Mask 7, ECC Low  - From https://en.wikipedia.org/wiki/File:QRCode-1-Intro.png
 //example 4 - Version 4, Mask 2, ECC Low  - From https://commons.wikimedia.org/wiki/File:Qrcode-WikiCommons-app-iOS.png
 //example 5 - Version 5, Mask 7, ECC Low  - From https://en.wikipedia.org/wiki/File:Japan-qr-code-billboard.jpg
 
+if (example==0)
+	quick_response(
+		qr_numeric([7,1,2,9]),
+		mark="black");
+
 if (example==1)
 	quick_response(
-		[
-			qr_bitfield(4,4), //byte mode
-			4,            //length
-			86,101,114,49 //ASCII "Ver1"
-		],
+		qr_bytes(ascii_to_vec("Ver1")),
 		mask=1, ecc_level=3,
 		mark="black");
 
 if (example==2)
 	quick_response(
-		[
-			qr_bitfield(4,4), //byte mode
-			9,            //length
-			86,101,114,   //ASCII "Version 2"
-			115,105,111,110,32,50
-		],
+		qr_bytes(ascii_to_vec("Version 2")),
 		mask=2, ecc_level=3,
 		mark="black");
 
 if (example==3)
 	quick_response(
-		[
-			qr_bitfield(4,4), //byte mode
-			42,           //length
-			//ASCII "Mr. Watson, come here - I want to see you."
-			77,114,46,32,87,97,116,115,111,110,44,
-			32,99,111,109,101,32,104,101,114,101,
-			32,45,32,73,32,119,97,110,116,32,116,
-			111,32,115,101,101,32,121,111,117,46
-		],
+		qr_bytes(ascii_to_vec("Mr. Watson, come here - I want to see you.")),
 		mask=7, ecc_level=0,
 		mark="black");
 
 if (example==4)
 	quick_response(
-		[
-			qr_bitfield(4,4), //byte mode
-			52,               //length
-			//ASCII "https://itunes.apple.com/us/app/wikimedia-commons/id"
-			104,116,116,112,115,58,47,47,105,116,117,110,101,115,46,97,112,112,108,101,46,99,111,109,47,117,115,47,97,112,112,47,119,105,107,105,109,101,100,105,97,45,99,111,109,109,111,110,115,47,105,100,
-			qr_bitfield(1,4),  //numeric mode
-			qr_bitfield(9,10), //length
-			//numeric encoding "630901780"
-			qr_bitfield(630,10),
-			qr_bitfield(901,10),
-			qr_bitfield(780,10),
-			qr_bitfield(4,4), //byte mode
-			5,                //length
-			//ASCII "?mt=8"
-			63,109,116,61,56
-		],
+		concat(
+			qr_bytes(ascii_to_vec(
+				"https://itunes.apple.com/us/app/wikimedia-commons/id")),
+			qr_numeric([6,3,0,9,0,1,7,8,0]),
+			qr_bytes(ascii_to_vec("?mt=8"))
+		),
 		mask=2, ecc_level=0,
 		mark="black");
 
+// This example has some shift-JIS encoded characters in the middle
+// of the string.
+// Since byte-mode is being used without an ECI directive, I suspect
+// that the proper interpretation of the symbol will depend on the
+// particular scanner software being used.
 if (example==5)
 	quick_response(
-		[
-			qr_bitfield(4,4), //byte mode
-			89,               //length
-			//shift-jis encoded string
-			//"http://sagasou.mobi \r\n\r\n"
-			104,116,116,112,58,47,47,115,97,103,97,115,111,117,46,109,111,98,105,32,13,10,13,10,
-			//"MEBKM:TITLE:"
-			77,69,66,75,77,58,84,73,84,76,69,58,
-			//"探そうモビで専門学校探し！"
-			146,84,130,187,130,164,131,130,131,114,130,197,144,234,150,229,138,119,141,90,146,84,130,181,129,73,
-			//";URL:http\://sagasou.mobi;;"
-			59,85,82,76,58,104,116,116,112,92,58,47,47,115,97,103,97,115,111,117,46,109,111,98,105,59,59
-		],
+		qr_bytes(
+			concat(
+				ascii_to_vec("http://sagasou.mobi \r\n\r\nMEBKM:TITLE:"),
+				[ //shift-jis encoded string "探そうモビで専門学校探し！"
+					146,84,
+					130,187,
+					130,164,
+					131,130,
+					131,114,
+					130,197,
+					144,234,
+					150,229,
+					138,119,
+					141,90,
+					146,84,
+					130,181,
+					129,73
+				],
+				ascii_to_vec(";URL:http\\://sagasou.mobi;;")
+			)
+		),
 		mask=7, ecc_level=0,
 		mark="black");
