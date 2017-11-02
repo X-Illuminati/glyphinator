@@ -562,10 +562,12 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 }
 
 /* Examples */
-example=3;
+example=4;
 //example 1 - Version 1, Mask 1, ECC High - From https://en.wikipedia.org/wiki/File:Qr-1.png
 //example 2 - Version 2, Mask 2, ECC High - From https://en.wikipedia.org/wiki/File:Qr-2.png
 //example 3 - Version 3, Mask 7, ECC Low  - From https://en.wikipedia.org/wiki/File:QRCode-1-Intro.png
+//example 4 - Version 4, Mask 2, ECC Low  - From https://commons.wikimedia.org/wiki/File:Qrcode-WikiCommons-app-iOS.png
+//example 5 - Version 5, Mask 7, ECC Low  - From https://en.wikipedia.org/wiki/File:Japan-qr-code-billboard.jpg
 
 if (example==1)
 	quick_response(
@@ -598,6 +600,45 @@ if (example==3)
 			32,99,111,109,101,32,104,101,114,101,
 			32,45,32,73,32,119,97,110,116,32,116,
 			111,32,115,101,101,32,121,111,117,46
+		],
+		mask=7, ecc_level=0,
+		mark="black");
+
+if (example==4)
+	quick_response(
+		[
+			qr_bitfield(4,4), //byte mode
+			52,               //length
+			//ASCII "https://itunes.apple.com/us/app/wikimedia-commons/id"
+			104,116,116,112,115,58,47,47,105,116,117,110,101,115,46,97,112,112,108,101,46,99,111,109,47,117,115,47,97,112,112,47,119,105,107,105,109,101,100,105,97,45,99,111,109,109,111,110,115,47,105,100,
+			qr_bitfield(1,4),  //numeric mode
+			qr_bitfield(9,10), //length
+			//numeric encoding "630901780"
+			qr_bitfield(630,10),
+			qr_bitfield(901,10),
+			qr_bitfield(780,10),
+			qr_bitfield(4,4), //byte mode
+			5,                //length
+			//ASCII "?mt=8"
+			63,109,116,61,56
+		],
+		mask=2, ecc_level=0,
+		mark="black");
+
+if (example==5)
+	quick_response(
+		[
+			qr_bitfield(4,4), //byte mode
+			89,               //length
+			//shift-jis encoded string
+			//"http://sagasou.mobi \r\n\r\n"
+			104,116,116,112,58,47,47,115,97,103,97,115,111,117,46,109,111,98,105,32,13,10,13,10,
+			//"MEBKM:TITLE:"
+			77,69,66,75,77,58,84,73,84,76,69,58,
+			//"探そうモビで専門学校探し！"
+			146,84,130,187,130,164,131,130,131,114,130,197,144,234,150,229,138,119,141,90,146,84,130,181,129,73,
+			//";URL:http\://sagasou.mobi;;"
+			59,85,82,76,58,104,116,116,112,92,58,47,47,115,97,103,97,115,111,117,46,109,111,98,105,59,59
 		],
 		mask=7, ecc_level=0,
 		mark="black");
