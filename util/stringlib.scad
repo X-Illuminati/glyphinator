@@ -43,8 +43,7 @@
 function atoi(a) = (len(a)==undef)?undef:
 [
 	let (val = search(a, "0123456789"))
-		for (i = [0:1:len(a) - 1])
-			val[i]
+		for (i = val) i
 ];
 
 echo("*** atoi() testcases ***");
@@ -63,7 +62,7 @@ echo(atoi("7")==[7]);
 echo(atoi("8")==[8]);
 echo(atoi("9")==[9]);
 echo(atoi("123")==[1,2,3]);
-echo(atoi("1a23b")==[1,2,3,undef,undef]); //degenerate case, don't really care about the result
+echo(atoi("1a23b")==[1,2,3]); //degenerate case, don't really care too much about the result
 
 /*
  * ascii_to_vec - convert ASCII string to decimal vector
@@ -73,8 +72,7 @@ echo(atoi("1a23b")==[1,2,3,undef,undef]); //degenerate case, don't really care a
 function ascii_to_vec(a) = (len(a)==undef)?undef:
 [
 	let (val = search(a, "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\x7f"))
-		for (i = [0:1:len(a) - 1])
-			val[i]+1
+		for (i = val) i+1
 ];
 
 echo("*** ascii_to_vec() testcases ***");
