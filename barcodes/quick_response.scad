@@ -144,6 +144,28 @@ function qr_numeric(digits) =
 	);
 
 /*
+ * qr_aphanumeric - encode alpha-numeric string in quick response
+ *   alphanumeric mode
+ *
+ * string - alphanumeric string to encode
+ *
+ */
+function qr_alphanum(string) = (len(string)==undef)?undef:
+	let (val=search(string, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:"))
+		concat (
+			[qr_alphanum_mode(), qr_bitfield(len(val),9)],
+			[
+				for (i = [0:2:len(val)-1])
+					let(
+						l=(val[i+1]==undef)?6:11,
+						v=(val[i+1]==undef)?val[i]:
+							45*val[i]+val[i+1]
+					)
+						qr_bitfield(v, l)
+			]
+		);
+
+/*
  * quick_response - Generate a Quick Response symbol
  *
  * bytes - data bytes to encode
@@ -180,10 +202,19 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 	if (version && version>6)
 		echo(str("WARNING: version ", version, " is not implemented"));
 
+	//determining the symbol version to use is somewhat tricky
+	//here do to various combinations of expert_mode and
+	//explicitly supplied version
+	//pre_pad_bytes is only used for the case where neither of
+	//these are set and we need to auto-detect the version
+	pre_pad_bytes = (!expert_mode && (version==undef))?
+		qr_pad(bytes, ecc_level=ecc_level):
+		undef;
+
 	props = (expert_mode)?
 		qr_get_props_by_total_size(len(bytes)):
 		(version==undef)?
-			qr_get_props_by_data_size(len(bytes), ecc_level):
+			qr_get_props_by_data_size(len(pre_pad_bytes), ecc_level):
 			qr_get_props_by_version(version);
 
 	if (props==undef)
@@ -200,13 +231,15 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 	rem_bits=qr_prop_remainder(props);
 	data_size=qr_prop_data_size(props, ecc_level);
 	
-	//echo(str("DEBUG version=", _version, " dims=", dims, " #align=", align_count, " total size=", size, " data size=", data_size, " remainder=", rem_bits));
+	echo(str("DEBUG version=", _version, " dims=", dims, " #align=", align_count, " total size=", size, " data size=", data_size, " remainder=", rem_bits));
 
 	data_bytes=(expert_mode)?
 		bytes:
-		qr_ecc(
-			qr_pad(bytes, data_size=data_size),
-			version=_version, ecc_level=ecc_level);
+		(pre_pad_bytes==undef)?
+			qr_ecc(qr_pad(bytes, data_size=data_size),
+				version=_version, ecc_level=ecc_level):
+			qr_ecc(pre_pad_bytes,
+				version=_version, ecc_level=ecc_level);
 
 	if (qr_prop_ecc_size(props, ecc_level)>30)
 		echo(str("WARNING: ECC block interleaving not implemented for ",
@@ -635,8 +668,8 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 }
 
 /* Examples */
-example=4;
-//example 0 - unverified - test for numeric mode
+example=0;
+//example 0 - unconfirmed validity - test for numeric mode and alphanum mode "+ASDF://$ %79145"
 //example 1 - Version 1, Mask 1, ECC High - From https://en.wikipedia.org/wiki/File:Qr-1.png
 //example 2 - Version 2, Mask 2, ECC High - From https://en.wikipedia.org/wiki/File:Qr-2.png
 //example 3 - Version 3, Mask 7, ECC Low  - From https://en.wikipedia.org/wiki/File:QRCode-1-Intro.png
@@ -645,7 +678,10 @@ example=4;
 
 if (example==0)
 	quick_response(
-		qr_numeric([7,1,2,9]),
+		concat(
+			qr_alphanum("+ASDF://$ %"),
+			qr_numeric([7,9,1,4,5])
+		),
 		mark="black");
 
 if (example==1)
