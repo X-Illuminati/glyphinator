@@ -415,16 +415,29 @@ function qr_pad(data, ecc_level, data_size=undef) =
 				data:
 				concat(data,[EOM])),
 		s=len(d),
+		//SPECIAL CASE - There is a circular dependency between
+		//  calculation of #dcw and size of compacted data.
+		//  We must ask a question: was the final EOM really
+		//  necessary?
+		//  The answer is determined by noticing that we added
+		//  EOM above, which is 4 bits of 0 and now we have a
+		//  compacted vector that might end with a partial byte
+		//  that is all 0 and less than 4-bits.
+		q=((qr_bitfield_val(d[s-1])==0)
+			&& (qr_bitfield_len(d[s-1]<=4))),
 		//determine number of data codewords
 		dcw=(data_size!=undef)?
 			data_size: //use data_size if provided
 			qr_prop_data_size(
 				qr_get_props_by_data_size(
-					(d[s-1]==EOM)?s-1:s, //final EOM byte is optional
+					//special case question determines min data size
+					(q)?s-1:s,
 					ecc_level), ecc_level)
 	)
 		(dcw==undef)?undef: //lookup failure
-		((s==dcw+1)&&(d[s-1]==EOM))? //special case - EOM unneeded
+		//special case question determines whether final dcw
+		//can be ignored
+		((s==dcw+1) && q)?
 			[for (i=[0:s-2]) qr_bitfield_val(d[i])]:
 		(s>dcw)?undef: //too long
 		let(offset=s%2) [
@@ -488,6 +501,44 @@ echo(qr_pad([qr_bitfield(1,4),1,2,3,4,5,6,7,8,9], 3)
 echo(qr_pad([qr_bitfield(1,4),1,2,3,4,5,6,7,8,9,10,11,12], 2)
 	==[16,16,32,48,64,80,96,112,128,144,160,176,192]);
 echo(qr_pad([qr_bitfield(1,4),1,2,3,4,5,6,7,8,9,10,11,12,13], 2)==[16,16,32,48,64,80,96,112,128,144,160,176,192,208,236,17,236,17,236,17,236,17]);
+
+//complex testcase - mix of alphanum and numeric mode with odd lengths
+qr_pad_test_in1 = [
+	qr_bitfield(2,4),
+	qr_bitfield(11,9),
+	qr_bitfield(1810,11),
+	qr_bitfield(1273,11),
+	qr_bitfield(719,11),
+	qr_bitfield(1978,11),
+	qr_bitfield(1701,11),
+	qr_bitfield(38,6),
+	qr_bitfield(1,4),
+	qr_bitfield(4,10),
+	qr_bitfield(791,10),
+	qr_bitfield(4,4)
+];
+qr_pad_test_out1 = [32,95,18,159,43,63,221,106,89,132,4,197,208];
+echo(qr_pad(qr_pad_test_in1, data_size=13) == qr_pad_test_out1);
+echo(qr_pad(qr_pad_test_in1, ecc_level=2) == qr_pad_test_out1);
+//more complex - overflow by 1 bit
+qr_pad_test_in2 = [
+	qr_bitfield(2,4),
+	qr_bitfield(11,9),
+	qr_bitfield(1810,11),
+	qr_bitfield(1273,11),
+	qr_bitfield(719,11),
+	qr_bitfield(1978,11),
+	qr_bitfield(1701,11),
+	qr_bitfield(38,6),
+	qr_bitfield(1,4),
+	qr_bitfield(5,10),
+	qr_bitfield(791,10),
+	qr_bitfield(45,7)
+];
+qr_pad_test_out2 = [32,95,18,159,43,63,221,106,89,132,5,197,214,128];
+echo(qr_pad(qr_pad_test_in2, data_size=14) == qr_pad_test_out2);
+echo(qr_pad(qr_pad_test_in2, ecc_level=2)
+	== concat(qr_pad_test_out2, [236,17,236,17,236,17,236,17]));
 
 /*
  * qr_ecc - append reed-solomon error correction bytes
