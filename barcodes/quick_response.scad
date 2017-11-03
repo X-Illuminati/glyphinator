@@ -79,7 +79,6 @@
  *     7=bowties
  *
  * TODO:
- * - Implement alphanumeric encoding
  * - ECC block interleaving
  * - Larger sizes
  * - Determine best mask automatically
@@ -231,7 +230,7 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 	rem_bits=qr_prop_remainder(props);
 	data_size=qr_prop_data_size(props, ecc_level);
 	
-	echo(str("DEBUG version=", _version, " dims=", dims, " #align=", align_count, " total size=", size, " data size=", data_size, " remainder=", rem_bits));
+	//echo(str("DEBUG version=", _version, " dims=", dims, " #align=", align_count, " total size=", size, " data size=", data_size, " remainder=", rem_bits));
 
 	data_bytes=(expert_mode)?
 		bytes:
@@ -668,8 +667,8 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 }
 
 /* Examples */
-example=0;
-//example 0 - unconfirmed validity - test for numeric mode and alphanum mode "+ASDF://$ %79145"
+example=4;
+//example 0 - unconfirmed validity - test for numeric mode and alphanum mode
 //example 1 - Version 1, Mask 1, ECC High - From https://en.wikipedia.org/wiki/File:Qr-1.png
 //example 2 - Version 2, Mask 2, ECC High - From https://en.wikipedia.org/wiki/File:Qr-2.png
 //example 3 - Version 3, Mask 7, ECC Low  - From https://en.wikipedia.org/wiki/File:QRCode-1-Intro.png
