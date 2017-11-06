@@ -622,6 +622,30 @@ echo(qr_pad(qr_pad_test_in2, data_size=14) == qr_pad_test_out2);
 echo(qr_pad(qr_pad_test_in2, ecc_level=2)
 	== concat(qr_pad_test_out2, [236,17,236,17,236,17,236,17]));
 
+// helper function to slice the data byte vector into
+// individual blocks for ECC
+// runs recursively with i acting as the index into
+// block_info and j acting as the index into data
+function qr_slice_data(data, block_info, i=0, j=0) =
+	concat(
+		[[for (k=[j:j+block_info[i][1]-1]) data[k]]],
+		(i==len(block_info)-1)?[]:
+			qr_slice_data(data, block_info, i+1, j+block_info[i][1])
+	);
+
+// helper function to interleave the slices and create
+// a single vector of data bytes
+// TODO: check results for more than 2 slices
+// TODO: check results for uneaven slices
+function qr_interleave(slices) =
+[
+	let (count=len(slices),
+		max_vec=[for (i=slices) len(i)],
+		slen=max(max_vec))
+	for (i=[0:slen-1])
+		for (j=slices) if (j[i]!=undef) j[i]
+];
+
 /*
  * qr_ecc - append reed-solomon error correction bytes
  *
@@ -635,7 +659,17 @@ function qr_ecc(data, version, ecc_level=2) =
 		dcw=qr_prop_data_size(p, ecc_level),
 		ecw=qr_prop_ecc_size(p, ecc_level))
 		(ecw==undef || dcw==undef || dcw!=len(data))?undef:
-		concat(data,rs285_ecc(data,dcw,ecw));
+		let(bc=qr_prop_blocks(p, ecc_level),
+			block_info=qr_prop_block_lens(p, ecc_level),
+			data_slices=qr_slice_data(data, block_info),
+			ecc_blocks=[
+				for (i=[0:bc-1])
+					rs285_ecc(data_slices[i],
+						block_info[i][1], //data slice size
+						block_info[i][0]) //ecc block len
+			]
+		)
+			concat(qr_interleave(data_slices),qr_interleave(ecc_blocks));
 
 echo("*** qr_ecc() testcases ***");
 echo(qr_ecc()==undef);
@@ -644,3 +678,7 @@ echo(qr_ecc([10,20], version=1, ecc_level=4)==undef);
 echo(qr_ecc([10,20], version=1)==undef);
 echo(qr_ecc([64,69,102,87,35,16,236,17,236], version=1, ecc_level=3)
 	==[64,69,102,87,35,16,236,17,236,150,106,201,175,226,23,128,154,76,96,209,69,45,171,227,182,8]);
+//2-block interleave testcase
+echo(qr_ecc([65,21,102,87,39,54,150,246,226,3,50,5,21,34,4,54,246,70,80,236,17,236,17,236,17,236],
+	version=3,ecc_level=3)
+	==[65,34,21,4,102,54,87,246,39,70,54,80,150,236,246,17,226,236,3,17,50,236,5,17,21,236,197,162,86,45,14,104,81,211,172,236,97,22,172,65,1,220,122,146,174,143,180,31,12,109,188,79,220,41,29,236,46,44,158,56,103,126,44,2,4,130,228,52,113,137]);

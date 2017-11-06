@@ -79,7 +79,7 @@
  *     7=bowties
  *
  * TODO:
- * - ECC block interleaving
+ * - Check version 6 block interleaving
  * - Larger sizes
  * - Determine best mask automatically
  *
@@ -240,8 +240,8 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 			qr_ecc(pre_pad_bytes,
 				version=_version, ecc_level=ecc_level);
 
-	if (qr_prop_ecc_size(props, ecc_level)>30)
-		echo(str("WARNING: ECC block interleaving not implemented for ",
+	if (qr_prop_blocks(props, ecc_level)>2)
+		echo(str("WARNING: ECC block interleaving not tested for ",
 			"version ", _version, ", ecc_level ", ecc_level));
 
 	//precomputed BCH remainders for the 32 different
@@ -671,9 +671,11 @@ example=4;
 //example 0 - unconfirmed validity - test for numeric mode and alphanum mode
 //example 1 - Version 1, Mask 1, ECC High - From https://en.wikipedia.org/wiki/File:Qr-1.png
 //example 2 - Version 2, Mask 2, ECC High - From https://en.wikipedia.org/wiki/File:Qr-2.png
-//example 3 - Version 3, Mask 7, ECC Low  - From https://en.wikipedia.org/wiki/File:QRCode-1-Intro.png
-//example 4 - Version 4, Mask 2, ECC Low  - From https://commons.wikimedia.org/wiki/File:Qrcode-WikiCommons-app-iOS.png
+//example 3 - Version 3, Mask 1, ECC High - From https://en.wikipedia.org/wiki/File:Qr-3.png
+//example 4 - Version 4, Mask 6, ECC High - From https://en.wikipedia.org/wiki/File:Qr-4.png
 //example 5 - Version 5, Mask 7, ECC Low  - From https://en.wikipedia.org/wiki/File:Japan-qr-code-billboard.jpg
+//example 7 - Version 3, Mask 7, ECC Low  - From https://en.wikipedia.org/wiki/File:QRCode-1-Intro.png
+//example 8 - Version 4, Mask 2, ECC Low  - From https://commons.wikimedia.org/wiki/File:Qrcode-WikiCommons-app-iOS.png
 
 if (example==0)
 	quick_response(
@@ -695,13 +697,19 @@ if (example==2)
 		mask=2, ecc_level=3,
 		mark="black");
 
-if (example==3)
+if(example==3)
 	quick_response(
-		qr_bytes(ascii_to_vec("Mr. Watson, come here - I want to see you.")),
-		mask=7, ecc_level=0,
+		qr_bytes(ascii_to_vec("Version 3 QR Code")),
+		mask=1, ecc_level=3,
 		mark="black");
 
-if (example==4)
+if(example==4)
+	quick_response(
+		qr_bytes(ascii_to_vec("Version 4 QR Code, up to 50 char")),
+		mask=6, ecc_level=3,
+		mark="black");
+
+if (example==5)
 	quick_response(
 		concat(
 			qr_bytes(ascii_to_vec(
@@ -712,12 +720,18 @@ if (example==4)
 		mask=2, ecc_level=0,
 		mark="black");
 
+if (example==7)
+	quick_response(
+		qr_bytes(ascii_to_vec("Mr. Watson, come here - I want to see you.")),
+		mask=7, ecc_level=0,
+		mark="black");
+
 // This example has some shift-JIS encoded characters in the middle
 // of the string.
 // Since byte-mode is being used without an ECI directive, I suspect
 // that the proper interpretation of the symbol will depend on the
 // particular scanner software being used.
-if (example==5)
+if (example==9)
 	quick_response(
 		qr_bytes(
 			concat(
