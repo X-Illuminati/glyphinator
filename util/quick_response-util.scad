@@ -116,6 +116,30 @@ function qr_prop_ecc_size(properties, ecc_level)=
 function qr_prop_data_size(properties, ecc_level)=
 	((ecc_level<0) || (ecc_level>3))?undef:
 	qr_prop_total_size(properties)-qr_prop_ecc_size(properties, ecc_level);
+function qr_prop_blocks(properties, ecc_level) =
+	let (ecc=qr_prop_ecc_size(properties, ecc_level))
+		ceil(pow(2,floor(log(2,ecc)-4)));
+// helper function to recursively determine block lengths
+// data block sizes have some corner cases that need to
+// be calculated based on a binary tree
+// in this function, i doubles each time until it matches bc
+// j will then match all of the values 0,1/bc,...,(bc-1)/bc
+function _block_lens_helper(bc, ds, i=1, j=0) =
+	(i==bc)?
+		[floor(ds/bc+j)]:
+		concat(
+			_block_lens_helper(bc,ds,i=i*2,j=j),
+			_block_lens_helper(bc,ds,i=i*2,j=j+1/(i*2))
+		);
+function qr_prop_block_lens(properties, ecc_level) =
+	let(bc=qr_prop_blocks(properties, ecc_level),
+		ds=qr_prop_data_size(properties, ecc_level),
+		ebs=qr_prop_ecc_size(properties, ecc_level)/bc
+	)
+	[for(i=_block_lens_helper(bc, ds))
+		[ebs, i] // combine ebs with helper array values
+	];
+
 
 /*
  * qr_get_props_by_version
@@ -203,6 +227,64 @@ echo("*** qr_prop_version testcases ***");
 echo(len(qr_prop_table)==6); //reminder to check results below
 for (i=[0:len(qr_prop_table)-1])
 	echo(qr_prop_version(qr_prop_table[i])==(i+1));
+
+echo("*** qr_prop_blocks testcases ***");
+echo(len(qr_prop_table)==6); //reminder to check results below
+for (i=[0:len(qr_prop_table)-1]) {
+	lev=0;
+	test_table=[1,1,1,1,1,2];
+	echo(qr_prop_blocks(qr_prop_table[i],lev)
+		==test_table[i]);
+}
+for (i=[0:len(qr_prop_table)-1]) {
+	lev=1;
+	test_table=[1,1,1,2,2,4];
+	echo(qr_prop_blocks(qr_prop_table[i],lev)
+		==test_table[i]);
+}
+for (i=[0:len(qr_prop_table)-1]) {
+	lev=2;
+	test_table=[1,1,2,2,4,4];
+	echo(qr_prop_blocks(qr_prop_table[i],lev)
+		==test_table[i]);
+}
+for (i=[0:len(qr_prop_table)-1]) {
+	lev=3;
+	test_table=[1,1,2,4,4,4];
+	echo(qr_prop_blocks(qr_prop_table[i],lev)
+		==test_table[i]);
+}
+
+echo("*** qr_prop_block_lens testcases ***");
+echo(len(qr_prop_table)==6); //reminder to add to results
+//we'll just spot check a few of these -
+//mostly the ones that are tricky
+echo(qr_prop_block_lens(qr_prop_table[0],0)
+	==[[7,19]]);
+echo(qr_prop_block_lens(qr_prop_table[5],0)
+	==[[18,68],[18,68]]);
+echo(qr_prop_block_lens(qr_prop_table[0],1)
+	==[[10,16]]);
+echo(qr_prop_block_lens(qr_prop_table[5],1)
+	==[[16,27],[16,27],[16,27],[16,27]]);
+echo(qr_prop_block_lens(qr_prop_table[0],2)
+	==[[13,13]]);
+echo(qr_prop_block_lens(qr_prop_table[2],2)
+	==[[18,17],[18,17]]);
+echo(qr_prop_block_lens(qr_prop_table[4],2)
+	==[[18,15],[18,15],[18,16],[18,16]]);
+echo(qr_prop_block_lens(qr_prop_table[5],2)
+	==[[24,19],[24,19],[24,19],[24,19]]);
+echo(qr_prop_block_lens(qr_prop_table[0],3)
+	==[[17,9]]);
+echo(qr_prop_block_lens(qr_prop_table[2],3)
+	==[[22,13],[22,13]]);
+echo(qr_prop_block_lens(qr_prop_table[3],3)
+	==[[16,9],[16,9],[16,9],[16,9]]);
+echo(qr_prop_block_lens(qr_prop_table[4],3)
+	==[[22,11],[22,11],[22,12],[22,12]]);
+echo(qr_prop_block_lens(qr_prop_table[5],3)
+	==[[28,15],[28,15],[28,15],[28,15]]);
 
 echo("*** combination testcases ***");
 echo(qr_prop_data_size(qr_get_props_by_version(1), 3)==9);
