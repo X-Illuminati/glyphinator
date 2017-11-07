@@ -3,7 +3,7 @@ OpenSCAD Barcode Generator - useful for direct part marking on 3D models
 https://github.com/X-Illuminati/glyphinator/
 
 ## Usage
-Supports UPC-A and DataMatrix (ECC200) barcodes. More to come!
+Supports UPC-A, DataMatrix (ECC200), and quick response 2D barcodes.
 
 ### UPC-A
 Include upc.scad in your model with the use command.
@@ -27,6 +27,18 @@ data_matrix(dm_ascii("1234"));
 
 ![DataMatrix Example](doc/datamatrix-example.png)
 ![DataMatrix Example](doc/datamatrix-example2.png)
+
+### Quick Response
+Include quick_response.scad in your model with the use command.
+See the documentation in [quick_response.scad](barcodes/quick_response.scad)
+for more details.
+```
+use <barcodes/quick_response.scad>
+quick_response(qr_numeric([0,1,2,3,4,5,6,7,8,9]));
+```
+
+![quick response example](doc/quick_response-example.png)
+![quick response example](doc/quick_response-example2.png)
 
 ## Software License
 Glyphinator is free software: you can redistribute it and/or modify
