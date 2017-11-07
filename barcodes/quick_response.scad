@@ -52,7 +52,6 @@
  *     See atoi() in util/stringlib.scad for ASCII to int conversion.
  *
  *   qr_alphanum(string)
- *     TODO: unimplemented
  *     Encode the alpha-numeric string as a quick response alphanumeric TLV
  *     vector.
  *     See qr_alphanum_mode() below.
@@ -79,7 +78,6 @@
  *     7=bowties
  *
  * TODO:
- * - Check version 6 block interleaving
  * - Larger sizes
  * - Determine best mask automatically
  *
@@ -187,9 +185,10 @@ function qr_alphanum(string) = (len(string)==undef)?undef:
  * quiet_zone - representation for the quiet zone
  *   (see documentation in bitmap.scad)
  * expert_mode - only use this if you are an expert
+ * debug - number of codewords to render
  */
 module quick_response(bytes, ecc_level=2, mask=0, version=undef,
-	mark=1, space=0, quiet_zone=0, expert_mode=false)
+	mark=1, space=0, quiet_zone=0, expert_mode=false, debug=undef)
 {
 	if ((version!=undef) && (version<1 || version>40))
 		echo(str("ERROR: version ", version, " is invalid"));
@@ -239,10 +238,6 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 				version=_version, ecc_level=ecc_level):
 			qr_ecc(pre_pad_bytes,
 				version=_version, ecc_level=ecc_level);
-
-	if (qr_prop_blocks(props, ecc_level)>2)
-		echo(str("WARNING: ECC block interleaving not tested for ",
-			"version ", _version, ", ecc_level ", ecc_level));
 
 	//precomputed BCH remainders for the 32 different
 	//format codes (BCH 15,5 with poly 1335)
@@ -525,7 +520,13 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 			masked_bitmap(cw, x+xadj, y+yadj);
 		}
 
-		if (i<(size-(rem_bits?0:1))) {
+		//for debugging purposes, we might want to only render
+		//n codewords so that it is easier to check the glyph
+		//as it is generated or column-by-column
+		render_len=(debug==undef)?
+			(size-(rem_bits?0:1)):
+			debug-1;
+		if (i<render_len) {
 			//echo(str("DEBUG dist=", dist, " reverse=",reverse_dir, " nest=", nest));
 			newi=i+1;
 			dist=collision_dist(x, ((dir)?y:y+s.y)+yadj, dir);
@@ -667,13 +668,14 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 }
 
 /* Examples */
-example=4;
+example=6;
 //example 0 - unconfirmed validity - test for numeric mode and alphanum mode
 //example 1 - Version 1, Mask 1, ECC High - From https://en.wikipedia.org/wiki/File:Qr-1.png
 //example 2 - Version 2, Mask 2, ECC High - From https://en.wikipedia.org/wiki/File:Qr-2.png
 //example 3 - Version 3, Mask 1, ECC High - From https://en.wikipedia.org/wiki/File:Qr-3.png
 //example 4 - Version 4, Mask 6, ECC High - From https://en.wikipedia.org/wiki/File:Qr-4.png
 //example 5 - Version 5, Mask 7, ECC Low  - From https://en.wikipedia.org/wiki/File:Japan-qr-code-billboard.jpg
+//example 6 - Version 6, Mask 4, ECC Qual - From https://commons.wikimedia.org/wiki/File:Qr_code-Main_Page_en.svg
 //example 7 - Version 3, Mask 7, ECC Low  - From https://en.wikipedia.org/wiki/File:QRCode-1-Intro.png
 //example 8 - Version 4, Mask 2, ECC Low  - From https://commons.wikimedia.org/wiki/File:Qrcode-WikiCommons-app-iOS.png
 
@@ -718,6 +720,14 @@ if (example==5)
 			qr_bytes(ascii_to_vec("?mt=8"))
 		),
 		mask=2, ecc_level=0,
+		mark="black");
+
+// This is not the best example due to the strange white-space
+// characters and inverted remainder pattern.
+if (example==6)
+	quick_response(
+		qr_bytes(ascii_to_vec("Welcome to Wikipedia,\r\nthe free encyclopedia \r\nthat anyone can edit.")),
+		mask=4, ecc_level=2,
 		mark="black");
 
 if (example==7)
