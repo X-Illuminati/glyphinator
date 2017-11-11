@@ -80,6 +80,7 @@
  * TODO:
  * - Larger sizes
  * - Determine best mask automatically
+ * - Invert 7-bit remainder word?
  *
  *****************************************************************************/
 use <../util/stringlib.scad>
@@ -678,6 +679,7 @@ example=6;
 //example 6 - Version 6, Mask 4, ECC Qual - From https://commons.wikimedia.org/wiki/File:Qr_code-Main_Page_en.svg
 //example 7 - Version 3, Mask 7, ECC Low  - From https://en.wikipedia.org/wiki/File:QRCode-1-Intro.png
 //example 8 - Version 4, Mask 2, ECC Low  - From https://commons.wikimedia.org/wiki/File:Qrcode-WikiCommons-app-iOS.png
+//example 9 - Version 5/6, Mask 3, ECC High - From https://commons.wikimedia.org/wiki/File:QR_code_on_oBike.jpg
 
 if (example==0)
 	quick_response(
@@ -713,36 +715,6 @@ if(example==4)
 
 if (example==5)
 	quick_response(
-		concat(
-			qr_bytes(ascii_to_vec(
-				"https://itunes.apple.com/us/app/wikimedia-commons/id")),
-			qr_numeric([6,3,0,9,0,1,7,8,0]),
-			qr_bytes(ascii_to_vec("?mt=8"))
-		),
-		mask=2, ecc_level=0,
-		mark="black");
-
-// This is not the best example due to the strange white-space
-// characters and inverted remainder pattern.
-if (example==6)
-	quick_response(
-		qr_bytes(ascii_to_vec("Welcome to Wikipedia,\r\nthe free encyclopedia \r\nthat anyone can edit.")),
-		mask=4, ecc_level=2,
-		mark="black");
-
-if (example==7)
-	quick_response(
-		qr_bytes(ascii_to_vec("Mr. Watson, come here - I want to see you.")),
-		mask=7, ecc_level=0,
-		mark="black");
-
-// This example has some shift-JIS encoded characters in the middle
-// of the string.
-// Since byte-mode is being used without an ECI directive, I suspect
-// that the proper interpretation of the symbol will depend on the
-// particular scanner software being used.
-if (example==9)
-	quick_response(
 		qr_bytes(
 			concat(
 				ascii_to_vec("http://sagasou.mobi \r\n\r\nMEBKM:TITLE:"),
@@ -765,4 +737,47 @@ if (example==9)
 			)
 		),
 		mask=7, ecc_level=0,
+		mark="black");
+
+// This example has some strange white-space characters and inverted
+// remainder pattern.
+if (example==6)
+	quick_response(
+		qr_bytes(ascii_to_vec("Welcome to Wikipedia,\r\nthe free encyclopedia \r\nthat anyone can edit.")),
+		mask=4, ecc_level=2,
+		mark="black");
+
+if (example==7)
+	quick_response(
+		qr_bytes(ascii_to_vec("Mr. Watson, come here - I want to see you.")),
+		mask=7, ecc_level=0,
+		mark="black");
+
+// This example has some shift-JIS encoded characters in the middle
+// of the string.
+// Since byte-mode is being used without an ECI directive, I suspect
+// that the proper interpretation of the symbol will depend on the
+// particular scanner software being used.
+if (example==8)
+	quick_response(
+		concat(
+			qr_bytes(ascii_to_vec(
+				"https://itunes.apple.com/us/app/wikimedia-commons/id")),
+			qr_numeric([6,3,0,9,0,1,7,8,0]),
+			qr_bytes(ascii_to_vec("?mt=8"))
+		),
+		mask=2, ecc_level=0,
+		mark="black");
+
+// This example is mirrored and is actually short enough to be
+// version 5. Presumably, they force it to be version 6 in order to
+// future-proof their serial number.
+if (example==9)
+	mirror([1,0,0])
+	quick_response(
+		concat(
+			qr_bytes(ascii_to_vec("http://www.o.bike/download/app.html?m=")),
+			qr_numeric([8,8,6,5,0,8,5,4,7])
+		),
+		mask=3, ecc_level=3, version=6,
 		mark="black");
