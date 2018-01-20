@@ -9,7 +9,7 @@ $fn=20*4;
 // 0 - white base
 // 1 - black QR code
 // 2 - both (preview-only)
-mark_space_select=2;
+mark_space_select=0;
 
 // Name your dog!
 dog_name="Spot";
@@ -54,20 +54,23 @@ qr_code_data = concat(
  * dog tag size/scale parameters
  * (probably don't need to modify these)
  */
-qr_dimension=49; //depends on version determined from qr_code_data
-round_radius=3;
-hole_radius=2.5;
-thickness=2;
-layer_height=.1;
-xy_scale=.5;
-name_font="Liberation Sans:style=Regular";
+name_font="Liberation Sans:style=Regular"; //font to use for dog name
+tag_size=40; //edge length of the tag in mm
+qr_dimension=41; //depends on version determined from qr_code_data
+hole_diameter=5; //diameter (mm) of the hole for clipping onto a collar
+round_radius=3; //radius (mm) for the determining the "round-rectangle" shape
+thickness=3; //thickness of the tag in mm
+layer_height=.2; //layer height of the printer in mm
+impression_depth=3; //number of layers of depth for the black parts
 
 /* derived values (don't modify) */
+dim=qr_dimension+8;
+xy_scale=tag_size/dim;
 rr=round_radius/xy_scale;
-hr=hole_radius/xy_scale;
-tl=thickness/layer_height;
-el=tl-1;
-dim=qr_dimension;
+hr=(hole_diameter/2)/xy_scale;
+tl=thickness/layer_height; //normalized to "# of layers"
+depth=impression_depth;
+el=tl-depth;
 
 /* generate dog tag */
 scale([xy_scale,xy_scale,layer_height])
@@ -98,13 +101,14 @@ scale([xy_scale,xy_scale,layer_height])
 						color("white")
 							cube([dim,dim,el]);
 					translate([0,0,el])
-						quick_response(
-							qr_code_data,
-							ecc_level=0,
-							mark=(mark_space_select!=0)?"black":0,
-							space=(mark_space_select!=1)?"white":0,
-							quiet_zone=(mark_space_select!=1)?"white":0
-						);
+						scale([1,1,el])
+							quick_response(
+								qr_code_data,
+								ecc_level=0,
+								mark=(mark_space_select!=0)?"black":0,
+								space=(mark_space_select!=1)?"white":0,
+								quiet_zone=(mark_space_select!=1)?"white":0
+							);
 				}
 				color("white")
 					translate([dim-hr-rr/2,dim/2,-1])
@@ -112,7 +116,7 @@ scale([xy_scale,xy_scale,layer_height])
 				translate([dim/2,dim/2,0])
 					rotate(-90)
 						mirror([1,0,0])
-							linear_extrude(height=1)
+							linear_extrude(height=depth)
 								text(dog_name, font=name_font,
 									halign="center", valign="center");
 			}
@@ -120,7 +124,7 @@ scale([xy_scale,xy_scale,layer_height])
 				translate([dim/2,dim/2,0])
 					rotate(-90)
 						mirror([1,0,0])
-							linear_extrude(height=1)
+							linear_extrude(height=depth)
 								text(dog_name, font=name_font,
 									halign="center", valign="center");
 		}
