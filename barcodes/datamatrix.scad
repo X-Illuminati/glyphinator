@@ -462,41 +462,128 @@ module data_matrix(bytes, mark=1, space=0, quiet_zone=0, expert_mode=false)
 }
 
 /* Examples */
+example=5;
+//example  0 - 10x10 - 3 data bytes, 5 ecc bytes
+//example  1 - 10x10 - 3 data bytes, 5 ecc bytes - expert_mode example
+//example  2 - 12x12 - 5 data bytes, 7 ecc bytes
+//example  3 - 12x12 - 5 data bytes, 7 ecc bytes - c40 mode
+//example  4 - 14x14 - 8 data bytes, 10 ecc bytes - mixed-mode
+//example  5 - 16x16 - 12 data bytes, 12 ecc bytes - From Wikipedia
+//example  6 - 18x18 - 18 data bytes, 14 ecc bytes
+//example  7 - 20x20 - 22 data bytes, 18 ecc bytes - fnc1 mode
+//example  8 - 22x22 - 30 data bytes, 20 ecc bytes - From http://www.idautomation.com
+//example  9 - 22x22 - 30 data bytes, 20 ecc bytes - text mode - From Wikipedia
+//example 10 - 22x22 - 30 data bytes, 20 ecc bytes - dm_pad example
+//example 11 - 22x22 - 30 data bytes, 20 ecc bytes - expert_mode example
+//example 12 - 24x24 - 36 data bytes, 24 ecc bytes
+//example 13 - 26x26 - 44 data bytes, 28 ecc bytes
+//example 14 - 10x10 - 3 data bytes, 5 ecc bytes - base-256 mode example
 
-/* 10x10 - 3 data bytes, 5 ecc bytes */
-//data_matrix(dm_ascii("123456"), mark="black");
-/* same as above but with manual ecc bytes instead of dm_ecc() */
-//data_matrix(concat(dm_ascii("123456"),[114,25,5,88,102]), mark="black", expert_mode=true);
+if (example==0)
+	data_matrix(dm_ascii("123456"), mark="black");
 
-/* 12x12 - 5 data bytes, 7 ecc bytes */
-//data_matrix(dm_ascii("17001164"), mark="black");
-//data_matrix(concat(c40_mode(),dm_c40("H0VLP7")), mark="black");
+// This example is the same as example 0 but with expert_mode ecc bytes provided
+// manually instead of using dm_ecc().
+if (example==1)
+	data_matrix(
+		concat(
+			dm_ascii("123456"),
+			[114,25,5,88,102]
+		),
+		mark="black", expert_mode=true);
 
-/* 14x14 - 8 data bytes, 10 ecc bytes */
-//data_matrix(concat(c40_mode(),dm_c40("TELESI"),ascii_mode(),dm_ascii("S1")), mark="black");
+if (example==2)
+	data_matrix(dm_ascii("17001164"), mark="black");
 
-/* 16x16 - 12 data bytes, 12 ecc bytes */
-data_matrix(dm_ascii("Wikipedia"), mark="black");
+if (example==3)
+	data_matrix(
+		concat(
+			c40_mode(),
+			dm_c40("H0VLP7")
+		),
+		mark="black");
 
-/* 18x18 - 18 data bytes, 14 ecc bytes */
-//data_matrix(dm_ascii("Hourez Jonathan"), mark="black");
+if (example==4)
+	data_matrix(
+		concat(
+			c40_mode(),
+			dm_c40("TELESI"),
+			ascii_mode(),
+			dm_ascii("S1")
+		),
+		mark="black");
 
-/* 20x20 - 22 data bytes, 18 ecc bytes */
-//data_matrix(concat([fnc1_mode()],dm_ascii("01034531200000111709112510ABCD1234")), mark="black");
+if (example==5)
+	data_matrix(dm_ascii("Wikipedia"), mark="black");
 
-/* 22x22 - 30 data bytes, 20 ecc bytes */
-//data_matrix(dm_ascii("http://www.idautomation.com"), mark="black");
-//data_matrix(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a")), mark="black");
-/* same as above but using expert mode */
-//data_matrix(dm_ecc(dm_pad(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a")))), mark="black", expert_mode=true);
-/* same as above but adding padding and ecc completely manually */
-//data_matrix(concat(text_mode(),dm_text("Wikipedia, the free encyclopedi"),ascii_mode(),dm_ascii("a"),EOM(),[104,254,150,45,20,78,91,227,88,60,21,174,213,62,93,103,126,46,56,95,247,47,22,65]), mark="black", expert_mode=true);
+if (example==6)
+	data_matrix(dm_ascii("Hourez Jonathan"), mark="black");
 
-/* 24x24 - 36 data bytes, 24 ecc bytes */
-//data_matrix(dm_ascii("http://de.wikiquote.org/wiki/Zukunft"), mark="black");
+if (example==7)
+	data_matrix(
+		concat(
+			[fnc1_mode()],
+			dm_ascii("01034531200000111709112510ABCD1234")
+		),
+		mark="black");
 
-/* 26x26 - 44 data bytes, 28 ecc bytes */
-//data_matrix(dm_ascii("http://semapedia.org/v/Mixer_(consolle)/it"), mark="black");
+if (example==8)
+	data_matrix(dm_ascii("http://www.idautomation.com"), mark="black");
 
-/* base-256 mode example: data is 63=0x3F='?' */
-//data_matrix(dm_base256_append([base256_mode()],[63],fills_symbol=true), mark="black");
+if (example==9)
+	data_matrix(
+		concat(
+			text_mode(),
+			dm_text("Wikipedia, the free encyclopedi"),
+			ascii_mode(),
+			dm_ascii("a")
+		),
+		mark="black");
+
+// This example is the same as example 9 but using expert_mode with dm_pad().
+if (example==10)
+	data_matrix(
+		dm_ecc(
+			dm_pad(
+				concat(
+					text_mode(),
+					dm_text("Wikipedia, the free encyclopedi"),
+					ascii_mode(),
+					dm_ascii("a")
+				)
+			)
+		),
+		mark="black", expert_mode=true);
+
+// This example is the same as example 9 and 10 but adding the expert_mode
+// padding and ecc bytes completely manually instead of using dm_pad().
+if (example==11)
+	data_matrix(
+		concat(
+			text_mode(),
+			dm_text("Wikipedia, the free encyclopedi"),
+			ascii_mode(),
+			dm_ascii("a"),
+			EOM(),
+			[104,254,150,45,20,78,91,227,88,60,21,174,213,62,93,103,126,46,56,95,247,47,22,65]
+		),
+		mark="black", expert_mode=true);
+
+if (example==12)
+	data_matrix(dm_ascii("http://de.wikiquote.org/wiki/Zukunft"), mark="black");
+
+if (example==13)
+	data_matrix(
+		dm_ascii("http://semapedia.org/v/Mixer_(consolle)/it"),
+		mark="black");
+
+// This example shows use of base-256 mode.
+// The data is a single byte (63=0x3F='?').
+if (example==14)
+	data_matrix(
+		dm_base256_append(
+			[base256_mode()],
+			[63],
+			fills_symbol=true
+		),
+		mark="black");
