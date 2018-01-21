@@ -29,10 +29,12 @@
  *     - util/bitlib.scad
  *
  * API:
- *   data_matrix(bytes, mark=1, space=0, quiet_zone=0, expert_mode=false)
+ *   data_matrix(bytes, mark=1, space=0, quiet_zone=0, expansion=.001,
+ *     expert_mode=false)
  *     Generates a DataMatrix symbol with contents specified by bytes.
- *     The mark, space, and quiet_zone parameters can be used to change the
- *     appearance of the symbol. See the bitmap library for more details.
+ *     The mark, space, quiet_zone, and expansion parameters can be used to
+ *     change the appearance of the symbol. See the bitmap library for more
+ *     details.
  *     The expert_mode flag should only be used by experts.
  *
  *   dm_ascii(string, frob_digits=true)
@@ -227,10 +229,12 @@ function dm_base256_append(preceding_data, byte_data, fills_symbol=false) =
  * mark - mark representation
  * space - space representation
  * quiet_zone - representation for the quiet zone
+ * expansion - reduce modules by this amount
  *   (see documentation in bitmap.scad)
  * expert_mode - only use this if you are an expert
  */
-module data_matrix(bytes, mark=1, space=0, quiet_zone=0, expert_mode=false)
+module data_matrix(bytes, mark=1, space=0, quiet_zone=0, expansion=.001,
+	expert_mode=false)
 {
 	properties = (expert_mode)?
 		dm_get_props_by_total_size(len(bytes)):
@@ -288,34 +292,42 @@ module data_matrix(bytes, mark=1, space=0, quiet_zone=0, expert_mode=false)
 
 		if (2==corner)
 			translate([size.x-6,-2,0])
-				2dbitmap([
-					[s[1][1],s[1][2],s[2][0],s[2][1]],
-					[0,0,0,s[2][2]]
-				]);
+				2dbitmap(
+					[
+						[s[1][1],s[1][2],s[2][0],s[2][1]],
+						[0,0,0,s[2][2]]
+					],
+					expansion=expansion);
 		else /* 1==corner */
 			translate([size.x-4,-4,0])
-				2dbitmap([
-					[s[1][1],s[1][2]],
-					[0,s[2][0]],
-					[0,s[2][1]],
-					[0,s[2][2]]
-				]);
+				2dbitmap(
+					[
+						[s[1][1],s[1][2]],
+						[0,s[2][0]],
+						[0,s[2][1]],
+						[0,s[2][2]]
+					],
+					expansion=expansion);
 	}
 
 	module drawcorner2(s, size, corner)
 	{
 		if (2==corner)
 			translate([0,-size.y+2,0])
-				2dbitmap([
-					[s[0][0]],
-					[s[0][1]],
-					[s[1][0]]
-				]);
+				2dbitmap(
+					[
+						[s[0][0]],
+						[s[0][1]],
+						[s[1][0]]
+					],
+					expansion=expansion);
 		else /* 1==corner */
 			translate([0,-size.y+2,0])
-				2dbitmap([
-					[s[0][0],s[0][1],s[1][0]]
-				]);
+				2dbitmap(
+					[
+						[s[0][0],s[0][1],s[1][0]]
+					],
+					expansion=expansion);
 	}
 
 	//check whether x,y have entered the upper-right corner
@@ -347,19 +359,19 @@ module data_matrix(bytes, mark=1, space=0, quiet_zone=0, expert_mode=false)
 				drawcorner2(bitmap, size, corner);
 			} else {
 				translate([0,y,0])
-					2dbitmap(colsplit(bitmap, x));
+					2dbitmap(colsplit(bitmap, x), expansion=expansion);
 				translate([size.x+x-2,y+yadj,0])
-					2dbitmap(colsplit(bitmap, -x));
+					2dbitmap(colsplit(bitmap, -x), expansion=expansion);
 			}
 		} else {
 			if (y+2>=0) {
 				translate([x,y,0])
-					2dbitmap(rowsplit(bitmap, y));
+					2dbitmap(rowsplit(bitmap, y), expansion=expansion);
 				translate([x+xadj,-size.y+2,0])
-					2dbitmap(rowsplit(bitmap, -y));
+					2dbitmap(rowsplit(bitmap, -y), expansion=expansion);
 			} else {
 				translate([x,y,0])
-					2dbitmap(bitmap);
+					2dbitmap(bitmap, expansion=expansion);
 			}
 		}
 	}
@@ -378,7 +390,7 @@ module data_matrix(bytes, mark=1, space=0, quiet_zone=0, expert_mode=false)
 		// draw the codeword
 		if (bitmap==undef)
 			translate([size.x-4,-size.y+2,0])
-				2dbitmap(unusedshape(size, mark, space));
+				2dbitmap(unusedshape(size, mark, space), expansion=expansion);
 		else
 			draw_codeword(bitmap, x, y, size, corner, xadj, yadj);
 
@@ -442,22 +454,24 @@ module data_matrix(bytes, mark=1, space=0, quiet_zone=0, expert_mode=false)
 		data_matrix_inner(data_bytes, size, corner, xadj, yadj, mark, space);
 		//draw the L finder pattern
 		translate([-1,-size.y+1])
-			2dbitmap([[for (i=[0:size.x-1]) mark]]);
+			2dbitmap([[for (i=[0:size.x-1]) mark]], expansion=expansion);
 		translate([-1,-size.y+2])
-			2dbitmap([for (i=[0:size.y-2]) [mark]]);
+			2dbitmap([for (i=[0:size.y-2]) [mark]], expansion=expansion);
 		//draw the clock track
-		2dbitmap([[for (i=[0:size.x-2]) (i%2)?mark:space]]);
+		2dbitmap([[for (i=[0:size.x-2]) (i%2)?mark:space]],
+			expansion=expansion);
 		translate([size.x-2,-size.y+2])
-			2dbitmap([for (i=[1:size.y-2]) [(i%2)?mark:space]]);
+			2dbitmap([for (i=[1:size.y-2]) [(i%2)?mark:space]],
+				expansion=expansion);
 		//draw the quiet zone
 		translate([-2,-size.y])
-			2dbitmap([[for (i=[0:size.x+1]) quiet_zone]]);
+			2dbitmap([[for (i=[0:size.x+1]) quiet_zone]], expansion=expansion);
 		translate([-2,-size.y+1])
-			2dbitmap([for (i=[0:size.y]) [quiet_zone]]);
+			2dbitmap([for (i=[0:size.y]) [quiet_zone]], expansion=expansion);
 		translate([-1,1])
-			2dbitmap([[for (i=[0:size.x-1]) quiet_zone]]);
+			2dbitmap([[for (i=[0:size.x-1]) quiet_zone]], expansion=expansion);
 		translate([size.x-1,-size.y+1])
-			2dbitmap([for (i=[1:size.y+1]) [quiet_zone]]);
+			2dbitmap([for (i=[1:size.y+1]) [quiet_zone]], expansion=expansion);
 	}
 }
 
