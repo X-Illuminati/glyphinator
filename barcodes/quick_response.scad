@@ -31,13 +31,14 @@
  *
  * API:
  *   quick_response(bytes, ecc_level=2, mask=0, version=undef
- *     mark=1, space=0, quiet_zone=0, expert_mode=false)
+ *     mark=1, space=0, quiet_zone=0, expansion=.001, expert_mode=false)
  *     Generates a quick-response-style symbol with contents specified by the
  *     bytes array and selectable ecc_level and mask pattern.
  *     See "ECC Levels" and "Mask Patterns" below for more details.
  *     If necessary, version can be specified explicitly.
- *     The mark, space, and quiet_zone parameters can be used to change the
- *     appearance of the symbol. See the bitmap library for more details.
+ *     The mark, space, quiet_zone, and expansion parameters can be used to
+ *     change the appearance of the symbol. See the bitmap library for more
+ *     details.
  *     The expert_mode flag should only be used by experts.
  *
  *   qr_bytes(data)
@@ -184,12 +185,14 @@ function qr_alphanum(string) = (len(string)==undef)?undef:
  * mark - mark representation
  * space - space representation
  * quiet_zone - representation for the quiet zone
+ * expansion - reduce modules by this amount
  *   (see documentation in bitmap.scad)
  * expert_mode - only use this if you are an expert
  * debug - number of codewords to render
  */
 module quick_response(bytes, ecc_level=2, mask=0, version=undef,
-	mark=1, space=0, quiet_zone=0, expert_mode=false, debug=undef)
+	mark=1, space=0, quiet_zone=0, expansion=.001,
+	expert_mode=false, debug=undef)
 {
 	if ((version!=undef) && (version<1 || version>40))
 		echo(str("ERROR: version ", version, " is invalid"));
@@ -464,7 +467,7 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 				]
 			];
 		translate([x,y])
-			2dbitmap(cooked);
+			2dbitmap(cooked, expansion=expansion);
 	}
 
 	//draw individual codewords from bytes array
@@ -575,46 +578,56 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 
 		//format chunk 1
 		translate([8,dims-6])
-			2dbitmap([
-				[fi(0)],
-				[fi(1)],
-				[fi(2)],
-				[fi(3)],
-				[fi(4)],
-				[fi(5)]
-			]);
+			2dbitmap(
+				[
+					[fi(0)],
+					[fi(1)],
+					[fi(2)],
+					[fi(3)],
+					[fi(4)],
+					[fi(5)]
+				],
+				expansion=expansion);
 
 		//format chunk 2
 		translate([7,dims-9])
-			2dbitmap([
-				[undef,fi(6)],
-				[fi(8),fi(7)]
-			]);
+			2dbitmap(
+				[
+					[undef,fi(6)],
+					[fi(8),fi(7)]
+				],
+				expansion=expansion);
 
 		//format chunk 3
 		translate([0,dims-9])
-			2dbitmap([
-				[fi(14),fi(13),fi(12),fi(11),fi(10),fi(9)]
-			]);
+			2dbitmap(
+				[
+					[fi(14),fi(13),fi(12),fi(11),fi(10),fi(9)]
+				],
+				expansion=expansion);
 
 		//format chunk 4
 		translate([dims-8,dims-9])
-			2dbitmap([
-				[fi(7),fi(6),fi(5),fi(4),fi(3),fi(2),fi(1),fi(0)]
-			]);
+			2dbitmap(
+				[
+					[fi(7),fi(6),fi(5),fi(4),fi(3),fi(2),fi(1),fi(0)]
+				],
+				expansion=expansion);
 
 		//format chunk 5
 		translate([8,0])
-			2dbitmap([
-				[mark],
-				[fi(8)],
-				[fi(9)],
-				[fi(10)],
-				[fi(11)],
-				[fi(12)],
-				[fi(13)],
-				[fi(14)]
-			]);
+			2dbitmap(
+				[
+					[mark],
+					[fi(8)],
+					[fi(9)],
+					[fi(10)],
+					[fi(11)],
+					[fi(12)],
+					[fi(13)],
+					[fi(14)]
+				],
+				expansion=expansion);
 	}
 
 	//draw the symbol
@@ -624,34 +637,34 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 		quick_response_inner(data_bytes, x=dims-2);
 
 		//draw the finder patterns
-		2dbitmap(finder(mark, space));
+		2dbitmap(finder(mark, space), expansion=expansion);
 		translate([0,7])
-			2dbitmap([[for (i=[0:7]) space]]);
+			2dbitmap([[for (i=[0:7]) space]], expansion=expansion);
 		translate([7,0])
-			2dbitmap([for (i=[0:6]) [space]]);
+			2dbitmap([for (i=[0:6]) [space]], expansion=expansion);
 		translate([0,dims-7])
-			2dbitmap(finder(mark, space));
+			2dbitmap(finder(mark, space), expansion=expansion);
 		translate([0,dims-8])
-			2dbitmap([[for (i=[0:7]) space]]);
+			2dbitmap([[for (i=[0:7]) space]], expansion=expansion);
 		translate([7,dims-7])
-			2dbitmap([for (i=[0:6]) [space]]);
+			2dbitmap([for (i=[0:6]) [space]], expansion=expansion);
 		translate([dims-7,dims-7])
-			2dbitmap(finder(mark, space));
+			2dbitmap(finder(mark, space), expansion=expansion);
 		translate([dims-8,dims-8])
-			2dbitmap([[for (i=[0:7]) space]]);
+			2dbitmap([[for (i=[0:7]) space]], expansion=expansion);
 		translate([dims-8,dims-7])
-			2dbitmap([for (i=[0:6]) [space]]);
+			2dbitmap([for (i=[0:6]) [space]], expansion=expansion);
 
 		//draw the clock track
 		translate([6,8])
-			2dbitmap([for (i=[0:dims-17]) [(i%2)?space:mark]]);
+			2dbitmap([for (i=[0:dims-17]) [(i%2)?space:mark]], expansion=expansion);
 		translate([8,dims-7])
-			2dbitmap([[for (i=[0:dims-17]) (i%2)?space:mark]]);
+			2dbitmap([[for (i=[0:dims-17]) (i%2)?space:mark]], expansion=expansion);
 
 		//draw the alignment pattern
 		if (align_count)
 			translate([dims-9,4])
-				2dbitmap(alignment(mark, space));
+				2dbitmap(alignment(mark, space), expansion=expansion);
 
 		//draw the quiet zone
 		translate([0,dims])
@@ -669,7 +682,7 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 }
 
 /* Examples */
-example=6;
+example=2;
 //example 0 - unconfirmed validity - test for numeric mode and alphanum mode
 //example 1 - Version 1, Mask 1, ECC High - From https://en.wikipedia.org/wiki/File:Qr-1.png
 //example 2 - Version 2, Mask 2, ECC High - From https://en.wikipedia.org/wiki/File:Qr-2.png
