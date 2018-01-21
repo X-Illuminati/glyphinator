@@ -9,7 +9,7 @@ $fn=20*4;
 // 0 - white base
 // 1 - black QR code
 // 2 - both (preview-only)
-mark_space_select=0;
+mark_space_select=2;
 
 // Name your dog!
 dog_name="Spot";
@@ -59,7 +59,7 @@ tag_size=40; //edge length of the tag in mm
 qr_dimension=41; //depends on version determined from qr_code_data
 hole_diameter=5; //diameter (mm) of the hole for clipping onto a collar
 round_radius=3; //radius (mm) for the determining the "round-rectangle" shape
-thickness=3; //thickness of the tag in mm
+thickness=2.6; //thickness of the tag in mm
 layer_height=.2; //layer height of the printer in mm
 impression_depth=3; //number of layers of depth for the black parts
 
@@ -72,36 +72,31 @@ tl=thickness/layer_height; //normalized to "# of layers"
 depth=impression_depth;
 el=tl-depth;
 
+/* helper module for writing text */
+module name_text(height=depth, offset=0)
+{
+	translate([dim/2,dim/2,offset])
+		rotate(-90)
+			mirror([1,0,0])
+				linear_extrude(height=height)
+					text(dog_name, font=name_font,
+						halign="center", valign="center");
+}
+
 /* generate dog tag */
 scale([xy_scale,xy_scale,layer_height])
-{
-	intersection()
+{ //all z-values within here are "layer number" rather than mm
+	difference() //cut corners to make rounded-rectangle
 	{
-		color ([0,0,0,0])
-			union()
-			{
-				translate([rr,0])
-					cube([dim-rr-rr,dim,tl]);
-				translate([0,rr])
-					cube([dim,dim-rr-rr,tl]);
-				translate([dim-rr,rr])
-					cylinder(h=tl,r=rr);
-				translate([dim-rr,dim-rr])
-					cylinder(h=tl,r=rr);
-				translate([rr,dim-rr])
-					cylinder(h=tl,r=rr);
-				translate([rr,rr])
-					cylinder(h=tl,r=rr);
-			}
-		union() {
-			difference() {
-				union()
+		union() { //square rectangle form of dogtag
+			difference() { //subtract hole for collar and name from obverse
+				union() //cube with QR code on top
 				{
 					if (mark_space_select!=1)
 						color("white")
 							cube([dim,dim,el]);
 					translate([0,0,el])
-						scale([1,1,el])
+						scale([1,1,depth])
 							quick_response(
 								qr_code_data,
 								ecc_level=0,
@@ -110,23 +105,41 @@ scale([xy_scale,xy_scale,layer_height])
 								quiet_zone=(mark_space_select!=1)?"white":0
 							);
 				}
+
+				//hole for attachment to collar
 				color("white")
 					translate([dim-hr-rr/2,dim/2,-1])
 						cylinder(h=tl+2,r=hr);
-				translate([dim/2,dim/2,0])
-					rotate(-90)
-						mirror([1,0,0])
-							linear_extrude(height=depth)
-								text(dog_name, font=name_font,
-									halign="center", valign="center");
+
+				//dog name cut out from obverse
+				name_text(height=depth+1,offset=-1);
 			}
-			if (mark_space_select!=0) color("black")
-				translate([dim/2,dim/2,0])
-					rotate(-90)
-						mirror([1,0,0])
-							linear_extrude(height=depth)
-								text(dog_name, font=name_font,
-									halign="center", valign="center");
+			//dog name printed on obverse in black
+			if (mark_space_select!=0)
+				color("black")
+					name_text(height=depth+1,offset=-1);
 		}
+
+		//create a corner rounding tool to trim square rectangle
+		color ("white")
+			difference()
+			{
+				translate([-2,-2,-2])
+					cube([dim+4,dim+4,tl+4]);
+				union() { //create a rounded rectangle
+					translate([rr,-1,-2])
+						cube([dim-rr-rr,dim+2,tl+4]);
+					translate([-1,rr,-2])
+						cube([dim+2,dim-rr-rr,tl+4]);
+					translate([dim-rr,rr,-2])
+						cylinder(h=tl+4,r=rr);
+					translate([dim-rr,dim-rr,-2])
+						cylinder(h=tl+4,r=rr);
+					translate([rr,dim-rr,-2])
+						cylinder(h=tl+4,r=rr);
+					translate([rr,rr,-2])
+						cylinder(h=tl+45,r=rr);
+				}
+			}
 	}
 }
