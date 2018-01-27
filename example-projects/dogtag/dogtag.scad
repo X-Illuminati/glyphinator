@@ -1,3 +1,54 @@
+/*****************************************************************************
+ * Dogtag
+ * Example usage of the  Quick Response barcode generation library
+ *****************************************************************************
+ * Copyright 2018 Chris Baker
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *****************************************************************************
+ * Usage:
+ *  1. Set mark_space_select to appropriate value.
+ *     The default value of 2 is useful for previewing the design.
+ *     Change it to 0 before rendering and exporting an STL.
+ *     A value of 1 may be useful for some purposes (like dualstruders).
+ *  2. Fill out the dog name, owner name, and contact details.
+ *  3. Printability can be greatly improved by reducing the content of the
+ *     QR code or increasing the size of the tag.
+ *       a. Try playing with the qr_code_data content and observe the
+ *          results in the "QR Properties" output in the console log.
+ *       b. Anything that can be encoded with qr_alphanum or qr_numeric rather
+ *          than qr_bytes will provide substantial space savings.
+ *       c. Try increasing tag_size to get individual QR modules larger than
+ *          one mm^2, which should produce good results on any printer.
+ *  4. Check the dog name on the back of the tag. If it is too long, you may
+ *     need to reduce the font size or increase the tag size.
+ *  5. After printing, fill in the holes with some sort of darkly-pigmented
+ *     epoxy or adhesive. Then sand down the surface once it has dried.
+ *
+ * Library Dependencies:
+ * - barcodes/quick_response.scad
+ *   - util/stringlib.scad
+ *   - util/bitlib.scad
+ *   - util/bitmap.scad
+ *   - util/quick_response-util.scad
+ *     - util/bitlib.scad
+ *     - util/reed-solomon-quick_response.scad
+ *       - util/bitlib.scad
+ * - util/stringlib.scad
+ * - util/quick_response-util.scad
+ *
+ *****************************************************************************/
 use <../../barcodes/quick_response.scad>
 use <../../util/stringlib.scad>
 use <../../util/quick_response-util.scad>
