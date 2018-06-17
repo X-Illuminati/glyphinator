@@ -21,13 +21,15 @@
  * Include this file with the "use" tag.
  *
  * API:
- *   1dbitmap(bitmap, center, expansion)
- *   2dbitmap(bitmap, center, expansion)
- *     Generate a 1 or 2-Dimensional field of modules (unit cubes) based on
- *     the provided bitmap vector. See Bitmap Vectors below.
+ *   1dbitmap(bitmap, center, expansion, vector_mode)
+ *   2dbitmap(bitmap, center, expansion, vector_mode)
+ *     Generate a 1 or 2-Dimensional field of modules based on the provided
+ *     bitmap vector. See Bitmap Vectors below.
  *     The center flag determines whether to center the bitmap on the origin.
  *     The expansion value actually shrinks each cube in the x and y
  *     dimension by the specified amount.
+ *     The vector_mode flag determines whether to create 3D solid geometry
+ *     (unit cubes) or 2D vector geometry (squares).
  *
  * Bitmap Vectors:
  *   The bitmap vectors primarily provide boolean information.
@@ -42,6 +44,29 @@
  *   color the module in the OpenSCAD preview window.
  *   In current versions of OpenSCAD, the color has no effect in the rendered
  *   view or STL output.
+ *
+ * Vector Mode:
+ *   Although OpenSCAD supports generating 2D geometry, there are several
+ *   caveats:
+ *   - 2D and 3D geometry cannot be mixed
+ *   - Extruding 2D geometry causes color information to be lost
+ *   - All 2D geometry is projected onto the XY plane when rendering
+ *   - Rendering also results in loss of color (same as 3D)
+ *   - The SVG exporter is somewhat limited:
+ *     - The pixel size of the image is hard-coded in the file
+ *     - The title of the image is a generic string
+ *     - The color selection for stroke and fill is fixed
+ *     - The stroke-width is set to a large value that will cause overlap
+ *     - The background is transparent
+ *     - Only one path element is created with all of the geometry; there is
+ *       no easy way to split up the geometry into multiple logical units.
+ *     - These issues can mostly be resolved by hand-editing the file:
+ *       - Remove or modify the width and height parameters from the svg
+ *         element at the top of the file to provide better scaling.
+ *       - Edit the title element at the top of the file to change the title.
+ *       - Edit the stroke and fill parameters of the path element (these will
+ *         probably be at the end of the file).
+ *       - Set the stroke-width parameter for the path element to 0.
  *****************************************************************************/
 
 /*
@@ -51,8 +76,9 @@
  *          Value can either be boolean, z-height, or color
  * center - center cubes around the origin
  * expansion - size of gap around each pixel (screendoor)
+ * vector_mode - create a 2D vector drawing instead of 3D extrusion
  */
-module 2dbitmap(bitmap=[[1,0],[0,1]], center=false, expansion=0)
+module 2dbitmap(bitmap=[[1,0],[0,1]], center=false, expansion=0, vector_mode=false)
 {
 	ylen=len(bitmap)-1;
 
@@ -62,15 +88,21 @@ module 2dbitmap(bitmap=[[1,0],[0,1]], center=false, expansion=0)
 			translate([x-(center?xlen/2:0),ylen-y-(center?ylen/2:0),0])
 				if (len(bitmap[y][x]))
 					color(bitmap[y][x])
-						cube([1-expansion,1-expansion,1], center=center);
+						if (vector_mode)
+							square([1-expansion,1-expansion], center=center);
+						else
+							cube([1-expansion,1-expansion,1], center=center);
 				else
 					if (bitmap[y][x])
-						cube([1-expansion,1-expansion,bitmap[y][x]], center=center);
+						if (vector_mode)
+							square([1-expansion,1-expansion], center=center);
+						else
+							cube([1-expansion,1-expansion,bitmap[y][x]], center=center);
 	}
 }
 
-module 1dbitmap(bitmap=[1,0,1,0,1], center=false, expansion=0)
-	2dbitmap([bitmap], center, expansion);
+module 1dbitmap(bitmap=[1,0,1,0,1], center=false, expansion=0, vector_mode=false)
+	2dbitmap([bitmap], center, expansion, vector_mode);
 
 /*
  * Examples
@@ -92,3 +124,9 @@ scale([2,2,1])
 // 1D with color
 translate([0,-10,0]) scale([1,3,1])
 	1dbitmap(bitmap=["red","white","blue",[0,0.3,0,0.5]]);
+
+// 1D with color using 2D-vector-mode
+translate([-7,-8,0]) scale([1,2])
+	1dbitmap(bitmap=["red",0,"blue",0,"green"], vector_mode=true);
+translate([-4.5,-10,0]) scale([1,2])
+	1dbitmap(bitmap=["red",0,"blue",0,"green"], vector_mode=true, center=true);
