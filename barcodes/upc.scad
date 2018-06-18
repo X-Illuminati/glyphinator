@@ -22,10 +22,12 @@
  * Depends on bitmap.scad library.
  *
  * API:
- *   UPC_A(string, bar, space, font, fontsize)
+ *   UPC_A(string, bar, space, quiet_zone, vector_mode, font, fontsize)
  *     Generates the UPC-A barcode representing string.
- *     The bar and space parameters can be used to change the appearance of
- *     the barcode. See the bitmap library for more details.
+ *     The bar, space, and quiet_zone parameters can be used to change the
+ *     appearance of the barcode. See the bitmap library for more details.
+ *     The vector_mode determines whether to create 2D vector artwork instead
+ *     of 3D solid geometry. See notes/caveats in the bitmap library.
  *     The font and fontsize control the font used for drawing the text digits
  *     below each symbol.
  *
@@ -87,10 +89,12 @@ function upc_symbol_len(symbol) =
  * quiet_zone - representation for quiet zone
  * (see documentation in bitmap.scad)
  *
+ * vector_mode - create a 2D vector drawing instead of 3D extrusion
  * parity - false for even, true for odd
  * reverse - true to mirror the symbol (EAN use)
  */
 module upc_symbol(symbol, bar=1, space=0, quiet_zone=0,
+	vector_mode=false,
 	parity=true, reverse=false)
 {
 	B=parity?bar:space;
@@ -103,7 +107,7 @@ module upc_symbol(symbol, bar=1, space=0, quiet_zone=0,
 				(symbol_vector[symbol][index])?B:S
 	];
 
-	1dbitmap(vector);
+	1dbitmap(vector, vector_mode=vector_mode);
 }
 
 /*
@@ -117,11 +121,13 @@ module upc_symbol(symbol, bar=1, space=0, quiet_zone=0,
  * quiet_zone - representation for quiet zone
  * (see documentation in bitmap.scad)
  *
+ * vector_mode - create a 2D vector drawing instead of 3D extrusion
  * font - font to use for decimal digits below each symbol
  *   set to undef if you do not want any text
  * fontsize - font size to use
  */
 module UPC_A(string, bar=1, space=0, quiet_zone=0,
+	vector_mode=false,
 	font="Liberation Mono:style=Bold", fontsize=1.5)
 {
 
@@ -192,16 +198,20 @@ module UPC_A(string, bar=1, space=0, quiet_zone=0,
 	//i incrementing from 0 to 16
 	//x is also incremented to translate each symbol
 	//along the x-axis
-	module draw_symbol(string, bar=1, space=0, quiet_zone=0, x=0, i=0)
+	module draw_symbol(string, bar=1, space=0, quiet_zone=0,
+		vector_mode=vector_mode,
+		x=0, i=0)
 	{
 		translate([0,27.55-get_height(i),0])
 			scale([0.33, get_height(i), 1])
 				translate([x,0,0])
 					upc_symbol(symbol=get_symbol(string,i),
 						bar=bar, space=space, quiet_zone=quiet_zone,
+						vector_mode=vector_mode,
 						parity=get_parity(i));
 		if (i<16)
 			draw_symbol(string, bar, space, quiet_zone,
+				vector_mode,
 				x+upc_symbol_len(get_symbol(string,i)),
 				i+1);
 	}
@@ -248,20 +258,30 @@ module UPC_A(string, bar=1, space=0, quiet_zone=0,
 			draw_text(string, font, fontsize, i+1);
 	}
 
-	draw_symbol(string, bar=bar, space=space, quiet_zone=quiet_zone);
+	module extrude_text(vector_mode, height)
+	{
+		if (vector_mode)
+			children();
+		else
+			linear_extrude(height)
+				children();
+	}
+
+	draw_symbol(string, bar=bar, space=space, quiet_zone=quiet_zone, vector_mode=vector_mode);
 	if (font)
 		if (len(bar))
-			color(bar) linear_extrude(height=1)
+			color(bar) extrude_text(vector_mode, 1)
 				draw_text(string, font, fontsize);
 		else
-			linear_extrude(height=bar)
+			extrude_text(vector_mode, bar)
 				draw_text(string, font, fontsize);
 }
 
 /* examples */
-//UPC_A("333333333331", bar="black", font=undef);
+//UPC_A("333333333331", bar="blue", font=undef);
 //UPC_A("33333333333", bar="black"); //checkdigit 1
 //UPC_A("03600029145", bar="black"); //checkdigit 2
 //UPC_A("04210000526", bar="black"); //checkdigit 4
 //UPC_A("12345678901", bar="black"); //checkdigit 2
 UPC_A("01234554321", bar="black"); //checkdigit 0
+//UPC_A("012345543210", bar="black", vector_mode=true);

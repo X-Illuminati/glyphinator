@@ -30,11 +30,13 @@
  *
  * API:
  *   data_matrix(bytes, mark=1, space=0, quiet_zone=0, expansion=.001,
- *     expert_mode=false)
+ *     vector_mode=false, expert_mode=false)
  *     Generates a DataMatrix symbol with contents specified by bytes.
  *     The mark, space, quiet_zone, and expansion parameters can be used to
  *     change the appearance of the symbol. See the bitmap library for more
  *     details.
+ *     The vector_mode flag determines whether to create 2D vector artwork
+ *     instead of 3D solid geometry. See notes/caveats in the bitmap library.
  *     The expert_mode flag should only be used by experts.
  *
  *   dm_ascii(string, frob_digits=true)
@@ -231,10 +233,12 @@ function dm_base256_append(preceding_data, byte_data, fills_symbol=false) =
  * quiet_zone - representation for the quiet zone
  * expansion - reduce modules by this amount
  *   (see documentation in bitmap.scad)
+ *
+ * vector_mode - create a 2D vector drawing instead of 3D extrusion
  * expert_mode - only use this if you are an expert
  */
 module data_matrix(bytes, mark=1, space=0, quiet_zone=0, expansion=.001,
-	expert_mode=false)
+	vector_mode=false, expert_mode=false)
 {
 	properties = (expert_mode)?
 		dm_get_props_by_total_size(len(bytes)):
@@ -297,7 +301,7 @@ module data_matrix(bytes, mark=1, space=0, quiet_zone=0, expansion=.001,
 						[s[1][1],s[1][2],s[2][0],s[2][1]],
 						[0,0,0,s[2][2]]
 					],
-					expansion=expansion);
+					expansion=expansion, vector_mode=vector_mode);
 		else /* 1==corner */
 			translate([size.x-4,-4,0])
 				2dbitmap(
@@ -307,7 +311,7 @@ module data_matrix(bytes, mark=1, space=0, quiet_zone=0, expansion=.001,
 						[0,s[2][1]],
 						[0,s[2][2]]
 					],
-					expansion=expansion);
+					expansion=expansion, vector_mode=vector_mode);
 	}
 
 	module drawcorner2(s, size, corner)
@@ -320,14 +324,14 @@ module data_matrix(bytes, mark=1, space=0, quiet_zone=0, expansion=.001,
 						[s[0][1]],
 						[s[1][0]]
 					],
-					expansion=expansion);
+					expansion=expansion, vector_mode=vector_mode);
 		else /* 1==corner */
 			translate([0,-size.y+2,0])
 				2dbitmap(
 					[
 						[s[0][0],s[0][1],s[1][0]]
 					],
-					expansion=expansion);
+					expansion=expansion, vector_mode=vector_mode);
 	}
 
 	//check whether x,y have entered the upper-right corner
@@ -359,19 +363,24 @@ module data_matrix(bytes, mark=1, space=0, quiet_zone=0, expansion=.001,
 				drawcorner2(bitmap, size, corner);
 			} else {
 				translate([0,y,0])
-					2dbitmap(colsplit(bitmap, x), expansion=expansion);
+					2dbitmap(colsplit(bitmap, x), expansion=expansion,
+						vector_mode=vector_mode);
 				translate([size.x+x-2,y+yadj,0])
-					2dbitmap(colsplit(bitmap, -x), expansion=expansion);
+					2dbitmap(colsplit(bitmap, -x), expansion=expansion,
+						vector_mode=vector_mode);
 			}
 		} else {
 			if (y+2>=0) {
 				translate([x,y,0])
-					2dbitmap(rowsplit(bitmap, y), expansion=expansion);
+					2dbitmap(rowsplit(bitmap, y), expansion=expansion,
+						vector_mode=vector_mode);
 				translate([x+xadj,-size.y+2,0])
-					2dbitmap(rowsplit(bitmap, -y), expansion=expansion);
+					2dbitmap(rowsplit(bitmap, -y), expansion=expansion,
+						vector_mode=vector_mode);
 			} else {
 				translate([x,y,0])
-					2dbitmap(bitmap, expansion=expansion);
+					2dbitmap(bitmap, expansion=expansion,
+						vector_mode=vector_mode);
 			}
 		}
 	}
@@ -390,7 +399,8 @@ module data_matrix(bytes, mark=1, space=0, quiet_zone=0, expansion=.001,
 		// draw the codeword
 		if (bitmap==undef)
 			translate([size.x-4,-size.y+2,0])
-				2dbitmap(unusedshape(size, mark, space), expansion=expansion);
+				2dbitmap(unusedshape(size, mark, space), expansion=expansion,
+					vector_mode=vector_mode);
 		else
 			draw_codeword(bitmap, x, y, size, corner, xadj, yadj);
 
@@ -454,30 +464,36 @@ module data_matrix(bytes, mark=1, space=0, quiet_zone=0, expansion=.001,
 		data_matrix_inner(data_bytes, size, corner, xadj, yadj, mark, space);
 		//draw the L finder pattern
 		translate([-1,-size.y+1])
-			2dbitmap([[for (i=[0:size.x-1]) mark]], expansion=expansion);
+			2dbitmap([[for (i=[0:size.x-1]) mark]], expansion=expansion,
+				vector_mode=vector_mode);
 		translate([-1,-size.y+2])
-			2dbitmap([for (i=[0:size.y-2]) [mark]], expansion=expansion);
+			2dbitmap([for (i=[0:size.y-2]) [mark]], expansion=expansion,
+				vector_mode=vector_mode);
 		//draw the clock track
 		2dbitmap([[for (i=[0:size.x-2]) (i%2)?mark:space]],
-			expansion=expansion);
+			expansion=expansion, vector_mode=vector_mode);
 		translate([size.x-2,-size.y+2])
 			2dbitmap([for (i=[1:size.y-2]) [(i%2)?mark:space]],
-				expansion=expansion);
+				expansion=expansion, vector_mode=vector_mode);
 		//draw the quiet zone
 		translate([-2,-size.y])
-			2dbitmap([[for (i=[0:size.x+1]) quiet_zone]], expansion=expansion);
+			2dbitmap([[for (i=[0:size.x+1]) quiet_zone]], expansion=expansion,
+				vector_mode=vector_mode);
 		translate([-2,-size.y+1])
-			2dbitmap([for (i=[0:size.y]) [quiet_zone]], expansion=expansion);
+			2dbitmap([for (i=[0:size.y]) [quiet_zone]], expansion=expansion,
+				vector_mode=vector_mode);
 		translate([-1,1])
-			2dbitmap([[for (i=[0:size.x-1]) quiet_zone]], expansion=expansion);
+			2dbitmap([[for (i=[0:size.x-1]) quiet_zone]], expansion=expansion,
+				vector_mode=vector_mode);
 		translate([size.x-1,-size.y+1])
-			2dbitmap([for (i=[1:size.y+1]) [quiet_zone]], expansion=expansion);
+			2dbitmap([for (i=[1:size.y+1]) [quiet_zone]], expansion=expansion,
+				vector_mode=vector_mode);
 	}
 }
 
 /* Examples */
 example=5;
-//example  0 - 10x10 - 3 data bytes, 5 ecc bytes
+//example  0 - 10x10 - 3 data bytes, 5 ecc bytes - vector_mode example
 //example  1 - 10x10 - 3 data bytes, 5 ecc bytes - expert_mode example
 //example  2 - 12x12 - 5 data bytes, 7 ecc bytes
 //example  3 - 12x12 - 5 data bytes, 7 ecc bytes - c40 mode
@@ -494,7 +510,7 @@ example=5;
 //example 14 - 10x10 - 3 data bytes, 5 ecc bytes - base-256 mode example
 
 if (example==0)
-	data_matrix(dm_ascii("123456"), mark="black");
+	data_matrix(dm_ascii("123456"), mark="black", vector_mode=true);
 
 // This example is the same as example 0 but with expert_mode ecc bytes provided
 // manually instead of using dm_ecc().

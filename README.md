@@ -40,6 +40,11 @@ quick_response(qr_numeric([0,1,2,3,4,5,6,7,8,9]));
 ![quick response example](doc/quick_response-example.png)
 ![quick response example](doc/quick_response-example2.png)
 
+### Generating Vector Images
+OpenSCAD can generate 2D vector graphics with a few caveats.
+To generate any of the barcodes using 2D vector geometry rather than 3D solid
+geometry, simply add `vector_mode=true` to the barcode module parameters.
+
 ## Software License
 Glyphinator is free software: you can redistribute it and/or modify
 it under the terms of the **GNU Lesser General Public License** as published by

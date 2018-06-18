@@ -31,7 +31,8 @@
  *
  * API:
  *   quick_response(bytes, ecc_level=2, mask=0, version=undef
- *     mark=1, space=0, quiet_zone=0, expansion=.001, expert_mode=false)
+ *                  mark=1, space=0, quiet_zone=0, expansion=.001,
+ *                  vector_mode=false, expert_mode=false)
  *     Generates a quick-response-style symbol with contents specified by the
  *     bytes array and selectable ecc_level and mask pattern.
  *     See "ECC Levels" and "Mask Patterns" below for more details.
@@ -39,6 +40,8 @@
  *     The mark, space, quiet_zone, and expansion parameters can be used to
  *     change the appearance of the symbol. See the bitmap library for more
  *     details.
+ *     The vector_mode flag determines whether to create 2D vector artwork
+ *     instead of 3D solid geometry. See notes/caveats in the bitmap library.
  *     The expert_mode flag should only be used by experts.
  *
  *   qr_bytes(data)
@@ -187,11 +190,14 @@ function qr_alphanum(string) = (len(string)==undef)?undef:
  * quiet_zone - representation for the quiet zone
  * expansion - reduce modules by this amount
  *   (see documentation in bitmap.scad)
+ *
+ * vector_mode - create a 2D vector drawing instead of 3D extrusion
  * expert_mode - only use this if you are an expert
  * debug - number of codewords to render
  */
 module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 	mark=1, space=0, quiet_zone=0, expansion=.001,
+	vector_mode=false,
 	expert_mode=false, debug=undef)
 {
 	if ((version!=undef) && (version<1 || version>40))
@@ -467,7 +473,7 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 				]
 			];
 		translate([x,y])
-			2dbitmap(cooked, expansion=expansion);
+			2dbitmap(cooked, expansion=expansion, vector_mode=vector_mode);
 	}
 
 	//draw individual codewords from bytes array
@@ -587,7 +593,7 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 					[fi(4)],
 					[fi(5)]
 				],
-				expansion=expansion);
+				expansion=expansion, vector_mode=vector_mode);
 
 		//format chunk 2
 		translate([7,dims-9])
@@ -596,7 +602,7 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 					[undef,fi(6)],
 					[fi(8),fi(7)]
 				],
-				expansion=expansion);
+				expansion=expansion, vector_mode=vector_mode);
 
 		//format chunk 3
 		translate([0,dims-9])
@@ -604,7 +610,7 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 				[
 					[fi(14),fi(13),fi(12),fi(11),fi(10),fi(9)]
 				],
-				expansion=expansion);
+				expansion=expansion, vector_mode=vector_mode);
 
 		//format chunk 4
 		translate([dims-8,dims-9])
@@ -612,7 +618,7 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 				[
 					[fi(7),fi(6),fi(5),fi(4),fi(3),fi(2),fi(1),fi(0)]
 				],
-				expansion=expansion);
+				expansion=expansion, vector_mode=vector_mode);
 
 		//format chunk 5
 		translate([8,0])
@@ -627,7 +633,7 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 					[fi(13)],
 					[fi(14)]
 				],
-				expansion=expansion);
+				expansion=expansion, vector_mode=vector_mode);
 	}
 
 	//draw the symbol
@@ -637,44 +643,60 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 		quick_response_inner(data_bytes, x=dims-2);
 
 		//draw the finder patterns
-		2dbitmap(finder(mark, space), expansion=expansion);
+		2dbitmap(finder(mark, space), expansion=expansion,
+			vector_mode=vector_mode);
 		translate([0,7])
-			2dbitmap([[for (i=[0:7]) space]], expansion=expansion);
+			2dbitmap([[for (i=[0:7]) space]], expansion=expansion,
+				vector_mode=vector_mode);
 		translate([7,0])
-			2dbitmap([for (i=[0:6]) [space]], expansion=expansion);
+			2dbitmap([for (i=[0:6]) [space]], expansion=expansion,
+				vector_mode=vector_mode);
 		translate([0,dims-7])
-			2dbitmap(finder(mark, space), expansion=expansion);
+			2dbitmap(finder(mark, space), expansion=expansion,
+				vector_mode=vector_mode);
 		translate([0,dims-8])
-			2dbitmap([[for (i=[0:7]) space]], expansion=expansion);
+			2dbitmap([[for (i=[0:7]) space]], expansion=expansion,
+				vector_mode=vector_mode);
 		translate([7,dims-7])
-			2dbitmap([for (i=[0:6]) [space]], expansion=expansion);
+			2dbitmap([for (i=[0:6]) [space]], expansion=expansion,
+				vector_mode=vector_mode);
 		translate([dims-7,dims-7])
-			2dbitmap(finder(mark, space), expansion=expansion);
+			2dbitmap(finder(mark, space), expansion=expansion,
+				vector_mode=vector_mode);
 		translate([dims-8,dims-8])
-			2dbitmap([[for (i=[0:7]) space]], expansion=expansion);
+			2dbitmap([[for (i=[0:7]) space]], expansion=expansion,
+				vector_mode=vector_mode);
 		translate([dims-8,dims-7])
-			2dbitmap([for (i=[0:6]) [space]], expansion=expansion);
+			2dbitmap([for (i=[0:6]) [space]], expansion=expansion,
+				vector_mode=vector_mode);
 
 		//draw the clock track
 		translate([6,8])
-			2dbitmap([for (i=[0:dims-17]) [(i%2)?space:mark]], expansion=expansion);
+			2dbitmap([for (i=[0:dims-17]) [(i%2)?space:mark]],
+				expansion=expansion, vector_mode=vector_mode);
 		translate([8,dims-7])
-			2dbitmap([[for (i=[0:dims-17]) (i%2)?space:mark]], expansion=expansion);
+			2dbitmap([[for (i=[0:dims-17]) (i%2)?space:mark]],
+				expansion=expansion, vector_mode=vector_mode);
 
 		//draw the alignment pattern
 		if (align_count)
 			translate([dims-9,4])
-				2dbitmap(alignment(mark, space), expansion=expansion);
+				2dbitmap(alignment(mark, space), expansion=expansion,
+					vector_mode=vector_mode);
 
 		//draw the quiet zone
 		translate([0,dims])
-			2dbitmap([for (i=[0:3]) [for (j=[0:dims-1]) quiet_zone]]);
+			2dbitmap([for (i=[0:3]) [for (j=[0:dims-1]) quiet_zone]],
+				vector_mode=vector_mode);
 		translate([-4,-4])
-			2dbitmap([for (i=[0:dims+7]) [for (j=[0:3]) quiet_zone]]);
+			2dbitmap([for (i=[0:dims+7]) [for (j=[0:3]) quiet_zone]],
+				vector_mode=vector_mode);
 		translate([0,-4])
-			2dbitmap([for (i=[0:3]) [for (j=[0:dims-1]) quiet_zone]]);
+			2dbitmap([for (i=[0:3]) [for (j=[0:dims-1]) quiet_zone]],
+				vector_mode=vector_mode);
 		translate([dims,-4])
-			2dbitmap([for (i=[0:dims+7]) [for (j=[0:3]) quiet_zone]]);
+			2dbitmap([for (i=[0:dims+7]) [for (j=[0:3]) quiet_zone]],
+				vector_mode=vector_mode);
 
 		//draw the format patterns
 		format_patterns();
@@ -683,7 +705,7 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 
 /* Examples */
 example=2;
-//example 0 - unconfirmed validity - test for numeric mode and alphanum mode
+//example 0 - unconfirmed validity - test for numeric mode and alphanum mode (also sets vector_mode for 2D rendering test)
 //example 1 - Version 1, Mask 1, ECC High - From https://en.wikipedia.org/wiki/File:Qr-1.png
 //example 2 - Version 2, Mask 2, ECC High - From https://en.wikipedia.org/wiki/File:Qr-2.png
 //example 3 - Version 3, Mask 1, ECC High - From https://en.wikipedia.org/wiki/File:Qr-3.png
@@ -700,7 +722,8 @@ if (example==0)
 			qr_alphanum("+ASDF://$ %"),
 			qr_numeric([7,9,1,4,5])
 		),
-		mark="black");
+		mark="black",
+		vector_mode=true);
 
 if (example==1)
 	quick_response(
