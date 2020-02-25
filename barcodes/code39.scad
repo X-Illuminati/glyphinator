@@ -49,7 +49,7 @@ char_vector = [
 function flatten(l) = [ for (a = l) for (b = a) b ];
 flat_char_vector = flatten(char_vector);
 
-/* 
+/*
  * 1 is wide bar, 0 is thin bar
  */
 bar_vector = [
@@ -71,24 +71,24 @@ bar_vector = [
  */
 space_vector = [1, 2, 3, 0];
 
-function get_flat_idx(char, idx=0) = 
-	char == flat_char_vector[idx] 
+function get_flat_idx(char, idx=0) =
+	char == flat_char_vector[idx]
 	? idx
 	: get_flat_idx(char, idx=idx+1);
 
 function get_idx(char) =
 	let(idx = get_flat_idx(char),
 		idx0 = floor(idx/len(char_vector[0])),
-		idx1 = idx % len(char_vector[0])) 
+		idx1 = idx % len(char_vector[0]))
 		[idx0, idx1];
 
-function get_bar_fragment_width(idx, space, bar, include_space=true) = 
+function get_bar_fragment_width(idx, space, bar, include_space=true) =
 	let(
 		bar_width = bar[idx] ? 3 : 1,
 		space_width = include_space ? (idx == space ? 3 : 1) : 0)
 	bar_width + space_width;
 
-function get_bar_offset(idx, space, bar, offset=0) = 
+function get_bar_offset(idx, space, bar, offset=0) =
 	idx == 0
 	? offset
 	: get_bar_offset(
@@ -127,12 +127,12 @@ module code39(code, height=10, unit=1, text=false) {
 		for(i = [0:len(code)-1]) {
 			if(code[i] != "*")
 				translate([(i+0.5)*16*unit, -3])
-					text(code[i], font="Courier New:style=Bold", 
+					text(code[i], font="Courier New:style=Bold",
 						 halign="center", valign="top", size=text_size);
 		}
 	} else if(text == "centered") {
 		translate([len(code)*16*unit/2, -3])
-			text(strip_marker(code), font="Courier New:style=Bold", 
+			text(strip_marker(code), font="Courier New:style=Bold",
 				 halign="center", valign="top", size=text_size);
 	}
 }
