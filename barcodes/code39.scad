@@ -43,8 +43,10 @@ char_vector = [
 	["7", "G", "Q", "-"],
 	["8", "H", "R", "."],
 	["9", "I", "S", " "],
-	["0", "J", "T", "*"]
+	["0", "J", "T", "*"],
+	["$", "/", "+", "%"]
 ];
+
 
 function flatten(l) = [ for (a = l) for (b = a) b ];
 flat_char_vector = flatten(char_vector);
@@ -62,14 +64,40 @@ bar_vector = [
 	[0, 0, 0, 1, 1], // |||▮▮
 	[1, 0, 0, 1, 0], // ▮||▮|
 	[0, 1, 0, 1, 0], // |▮|▮|
-	[0, 0, 1, 1, 0]  // ||▮▮|
+	[0, 0, 1, 1, 0], // ||▮▮|
+	[0, 0, 0, 0, 0], // |||||
 ];
 
 
 /*
  * index to put a space in (0 indexed, space is put after index)
  */
-space_vector = [1, 2, 3, 0];
+space_vector = [
+	[
+		[1],
+		[2],
+		[3],
+		[0]
+	],
+	[
+		[0, 1, 2],
+		[0, 1, 3],
+		[0, 2, 3],
+		[1, 2, 3]
+	]
+];
+
+function item_in_list(item, list, idx=0) =
+	list[idx] == item
+	? true
+	: idx >= len(list)
+	  ? false
+	  : item_in_list(item, list, idx=idx+1);
+
+function get_space_vector_idx(idx0) =
+	idx0 == 10
+	? 1
+	: 0;
 
 function get_flat_idx(char, idx=0) =
 	char == flat_char_vector[idx]
@@ -85,7 +113,7 @@ function get_idx(char) =
 function get_bar_fragment_width(idx, space, bar, include_space=true) =
 	let(
 		bar_width = bar[idx] ? 3 : 1,
-		space_width = include_space ? (idx == space ? 3 : 1) : 0)
+		space_width = include_space ? (item_in_list(idx, space) ? 3 : 1) : 0)
 	bar_width + space_width;
 
 function get_bar_offset(idx, space, bar, offset=0) =
@@ -104,7 +132,8 @@ function strip_marker(in, out="", idx=0) =
 module code39_symbol(char, height=10) {
 	idxs = get_idx(char);
 	bar = bar_vector[idxs[0]];
-	space = space_vector[idxs[1]];
+	space_idx = get_space_vector_idx(idxs[0]);
+	space = space_vector[space_idx][idxs[1]];
 	for(i = [0:len(bar)-1]) {
 		let(
 			bar_width = get_bar_fragment_width(i, space, bar, include_space=false),
@@ -138,5 +167,5 @@ module code39(code, height=10, unit=1, text=false) {
 }
 
 color("black")
-code39("*ABCDEFG*", height=40, text="centered");
+code39("*ABCDEFG$/+%*", height=40, text="centered");
 
