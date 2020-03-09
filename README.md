@@ -21,8 +21,6 @@ UPC_A("01234554321");
 ![UPC-A Example](doc/upc-example2.png)
 
 ### Code-39
-Note: Currently the characters '$', '/', '+', and '%' are not supported.
-
 Include code39.scad in your model with the use command.
 See the documentation in [code39.scad](barcodes/code39.scad) for more details.
 ```
