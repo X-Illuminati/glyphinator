@@ -34,6 +34,7 @@
  * TODO:
  *   Add EAN-13 support
  *****************************************************************************/
+use <../util/compat.scad>
 use <../util/bitmap.scad>
 
 /*
@@ -269,11 +270,11 @@ module UPC_A(string, bar=1, space=0, quiet_zone=0,
 
 	draw_symbol(string, bar=bar, space=space, quiet_zone=quiet_zone, vector_mode=vector_mode);
 	if (font)
-		if (len(bar))
+		if (is_indexable(bar))
 			color(bar) extrude_text(vector_mode, 1)
 				draw_text(string, font, fontsize);
 		else
-			extrude_text(vector_mode, bar)
+			extrude_text(vector_mode, clamp_nonnum(bar))
 				draw_text(string, font, fontsize);
 }
 
@@ -285,3 +286,9 @@ module UPC_A(string, bar=1, space=0, quiet_zone=0,
 //UPC_A("12345678901", bar="black"); //checkdigit 2
 UPC_A("01234554321", bar="black"); //checkdigit 0
 //UPC_A("012345543210", bar="black", vector_mode=true);
+//UPC_A("012345543210", bar=true);
+//UPC_A("012345543210", bar=3);
+//UPC_A("012345543210", bar=[.5,.8,.9]);
+//UPC_A("012345543210", bar=false);
+//UPC_A("012345543210", bar=0);
+//UPC_A("012345543210");
