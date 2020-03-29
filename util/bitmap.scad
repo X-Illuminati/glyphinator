@@ -19,6 +19,7 @@
  *****************************************************************************
  * Usage:
  * Include this file with the "use" tag.
+ * Depends on compat.scad library.
  *
  * API:
  *   1dbitmap(bitmap, center, expansion, vector_mode)
@@ -68,6 +69,7 @@
  *         probably be at the end of the file).
  *       - Set the stroke-width parameter for the path element to 0.
  *****************************************************************************/
+use <compat.scad>
 
 /*
  * 2dbitmap - Turn a 2D vector into a bitmap of cubes
@@ -86,7 +88,7 @@ module 2dbitmap(bitmap=[[1,0],[0,1]], center=false, expansion=0, vector_mode=fal
 		xlen=len(bitmap[y])-1;
 		for (x=[0:xlen])
 			translate([x-(center?xlen/2:0),ylen-y-(center?ylen/2:0),0])
-				if (len(bitmap[y][x]))
+				if (is_indexable(bitmap[y][x]))
 					color(bitmap[y][x])
 						if (vector_mode)
 							square([1-expansion,1-expansion], center=center);
@@ -97,7 +99,7 @@ module 2dbitmap(bitmap=[[1,0],[0,1]], center=false, expansion=0, vector_mode=fal
 						if (vector_mode)
 							square([1-expansion,1-expansion], center=center);
 						else
-							cube([1-expansion,1-expansion,bitmap[y][x]], center=center);
+							cube([1-expansion,1-expansion,clamp_nonnum(bitmap[y][x])], center=center);
 	}
 }
 
@@ -109,8 +111,8 @@ module 1dbitmap(bitmap=[1,0,1,0,1], center=false, expansion=0, vector_mode=false
  */
 
 // 1D with z-height
-translate([0,10,0]) scale([1,10,1])
-	1dbitmap(bitmap=[1,1,0,2,0,0,3], center=true, expansion=.1);
+translate([10,0,0]) scale([1,10,1])
+	1dbitmap(bitmap=[1,1,0,2,0,0,3], expansion=.1);
 
 // 1D with boolean
 translate([-20,0,0]) scale([1,10,1])
