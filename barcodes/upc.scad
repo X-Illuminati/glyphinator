@@ -145,39 +145,41 @@ module UPC_A(string, bar=1, space=0, quiet_zone=0,
 	vector_mode=false,
 	font="Liberation Mono:style=Bold", fontsize=1.5)
 {
+	symbol_length=12;
+
 	//calculates the checkdigit by recursively
-	//parsing the 11-digit vector provided
-	//i is incremented from 0 to 10
+	//parsing the digit vector provided
+	//i is incremented from 0 to symbol_length-2
 	//i has a special default value of -1 to
 	//conduct some final processing on the answer
 	function calculate_checkdigit(digits, i=-1) =
-		(i==10)?digits[i]*3:
+		(i==symbol_length-2)?digits[i]*3:
 		(i==-1)?
 			(10-(calculate_checkdigit(digits,i=0)%10))%10
 		:
-			(((10-i)%2)?1:3)*digits[i]
+			(((symbol_length-2-i)%2)?1:3)*digits[i]
 				+calculate_checkdigit(digits, i+1);
 
 	digits = atoi(string);
 	draw_quiet_arrow = false;
-	do_assert((len(digits)==11) || (len(digits)==12),
+	do_assert((len(digits)==(symbol_length-1)) || (len(digits)==symbol_length),
 		"UPC string must be exactly 11 or 12 digits");
 
 	checkdigit = calculate_checkdigit(digits);
-	if (len(digits)==12 && digits[11] != checkdigit)
-		echo(str("WARNING: incorrect check digit supplied ", digits[11], "!=", checkdigit));
+	if (len(digits)==symbol_length && digits[symbol_length-1] != checkdigit)
+		echo(str("WARNING: incorrect check digit supplied ", digits[symbol_length-1], "!=", checkdigit));
 
 	//returns the symbol to draw at position i
 	//i ranges from 0 to 16
 	function get_symbol(digits, checkdigit, i) =
 		(i==0)?10:
 		(i==1)?11:
-		(i<8)?digits[i-2]:
+		(i<8)?digits[i-(14-symbol_length)]:
 		(i==8)?12:
-		(i<14)?digits[i-3]:
+		(i<14)?digits[i-(15-symbol_length)]:
 		(i==14)?
-			(len(digits)>11)?
-				digits[i-3]:
+			(len(digits)>(symbol_length-1))?
+				digits[symbol_length-1]:
 				checkdigit:
 		(i==15)?11:
 		(i==16)?10: undef;
@@ -186,9 +188,9 @@ module UPC_A(string, bar=1, space=0, quiet_zone=0,
 	//symbol in position i
 	//i ranges from 0 to 16
 	function get_height(i) =
-		(i<3)?27.55:
+		(i<(15-symbol_length))?27.55:
 		(i==8)?27.55:
-		(i>13)?27.55: 25.9;
+		(i>(symbol_length+1))?27.55: 25.9;
 
 	//returns whether odd or even parity should
 	//be used for the symbol in position i
@@ -202,7 +204,8 @@ module UPC_A(string, bar=1, space=0, quiet_zone=0,
 
 	//draw individual upc symbol bars based on contents
 	//of supplied string
-	//digits vector must contain 11 or 12 numerals
+	//digits vector must contain symbol_length
+	//(or symbol_length-1) numerals
 	//this module is then called recursively with
 	//i incrementing from 0 to 16
 	//x is also incremented to translate each symbol
@@ -256,13 +259,14 @@ module UPC_A(string, bar=1, space=0, quiet_zone=0,
 	];
 
 	//draw individual text numerals
-	//digits must contain 11 or 12 numerals
+	//digits vector must contain symbol_length
+	//(or symbol_length-1) numerals
 	//this module is then called recursively with
-	//i incrementing from 0 to 12
+	//i incrementing from 0 to symbol_length
 	module draw_text(digits, checkdigit, draw_quiet_arrow,
 		font, fontsize, i=0)
 	{
-		char = (i==12)?
+		char = (i==symbol_length)?
 				(draw_quiet_arrow)?">":"":
 				(digits[i]!=undef)?
 			str(digits[i]):str(checkdigit);
@@ -270,7 +274,7 @@ module UPC_A(string, bar=1, space=0, quiet_zone=0,
 		translate(get_text_pos(i))
 			text(char, font=font, size=fontsize);
 
-		if (i<12)
+		if (i<symbol_length)
 			draw_text(digits, checkdigit, draw_quiet_arrow,
 				font, fontsize, i+1);
 	}
@@ -340,39 +344,41 @@ module EAN_13(string, bar=1, space=0, quiet_zone=0,
 	vector_mode=false,
 	font="Liberation Mono:style=Bold", fontsize=1.5)
 {
+	symbol_length=13;
+
 	//calculates the checkdigit by recursively
-	//parsing the 12-digit vector provided
-	//i is incremented from 0 to 11
+	//parsing the digit vector provided
+	//i is incremented from 0 to symbol_length-2
 	//i has a special default value of -1 to
 	//conduct some final processing on the answer
 	function calculate_checkdigit(digits, i=-1) =
-		(i==11)?digits[i]*3:
+		(i==symbol_length-2)?digits[i]*3:
 		(i==-1)?
 			(10-(calculate_checkdigit(digits,i=0)%10))%10
 		:
-			(((11-i)%2)?1:3)*digits[i]
+			(((symbol_length-2-i)%2)?1:3)*digits[i]
 				+calculate_checkdigit(digits, i+1);
 
 	digits = atoi(string);
 	draw_quiet_arrow = (string[len(string)-1]==">");
-	do_assert((len(digits)==12) || (len(digits)==13),
+	do_assert((len(digits)==(symbol_length-1)) || (len(digits)==symbol_length),
 		"GTIN string must be exactly 12 or 13 digits");
 
 	checkdigit = calculate_checkdigit(digits);
-	if (len(digits)==13 && digits[12] != checkdigit)
-		echo(str("WARNING: incorrect check digit supplied ", digits[12], "!=", checkdigit));
+	if (len(digits)==symbol_length && digits[symbol_length-1] != checkdigit)
+		echo(str("WARNING: incorrect check digit supplied ", digits[symbol_length-1], "!=", checkdigit));
 
 	//returns the symbol to draw at position i
 	//i ranges from 0 to 16
 	function get_symbol(digits, checkdigit, i) =
 		(i==0)?10:
 		(i==1)?11:
-		(i<8)?digits[i-1]:
+		(i<8)?digits[i-(14-symbol_length)]:
 		(i==8)?12:
-		(i<14)?digits[i-2]:
+		(i<14)?digits[i-(15-symbol_length)]:
 		(i==14)?
-			(len(digits)>12)?
-				digits[i-2]:
+			(len(digits)>(symbol_length-1))?
+				digits[symbol_length-1]:
 				checkdigit:
 		(i==15)?11:
 		(i==16)?10: undef;
@@ -381,9 +387,9 @@ module EAN_13(string, bar=1, space=0, quiet_zone=0,
 	//symbol in position i
 	//i ranges from 0 to 16
 	function get_height(i) =
-		(i<2)?27.55:
+		(i<(15-symbol_length))?27.55:
 		(i==8)?27.55:
-		(i>14)?27.55: 25.9;
+		(i>(symbol_length+1))?27.55: 25.9;
 
 	//returns whether odd or even parity should
 	//be used for the symbol in position i
@@ -409,7 +415,8 @@ module EAN_13(string, bar=1, space=0, quiet_zone=0,
 
 	//draw individual upc symbol bars based on contents
 	//of supplied string
-	//digits vector must contain 12 or 13 numerals
+	//digits vector must contain symbol_length
+	//(or symbol_length-1) numerals
 	//this module is then called recursively with
 	//i incrementing from 0 to 16
 	//x is also incremented to translate each symbol
@@ -462,13 +469,14 @@ module EAN_13(string, bar=1, space=0, quiet_zone=0,
 	];
 
 	//draw individual text numerals
-	//digits must contain 12 or 13 numerals
+	//digits vector must contain symbol_length
+	//(or symbol_length-1) numerals
 	//this module is then called recursively with
-	//i incrementing from 0 to 13
+	//i incrementing from 0 to symbol_length
 	module draw_text(digits, checkdigit, draw_quiet_arrow,
 		font, fontsize, i=0)
 	{
-		char = (i==13)?
+		char = (i==symbol_length)?
 				(draw_quiet_arrow)?">":"":
 				(digits[i]!=undef)?
 					str(digits[i]):str(checkdigit);
@@ -476,7 +484,7 @@ module EAN_13(string, bar=1, space=0, quiet_zone=0,
 		translate(get_text_pos(i))
 			text(char, font=font, size=fontsize);
 
-		if (i<13)
+		if (i<symbol_length)
 			draw_text(digits, checkdigit, draw_quiet_arrow,
 				font, fontsize, i+1);
 	}
