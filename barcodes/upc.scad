@@ -129,7 +129,7 @@ module upc_symbol(symbol, bar=1, space=0, quiet_zone=0,
  * UPC_A - Generate a UPC-A barcode
  *
  * string - UPC digit string to encode
- *   string of digits (only) of length 12
+ *   string of digits of length 11 or 12
  * 
  * bar - bar representation
  * space - space representation
@@ -145,51 +145,40 @@ module UPC_A(string, bar=1, space=0, quiet_zone=0,
 	vector_mode=false,
 	font="Liberation Mono:style=Bold", fontsize=1.5)
 {
-
-	if ((len(string)!=11)&&(len(string)!=12))
-		echo("WARNING: UPC string must be exactly 11 or 12 digits");
-
-	//translates the numeral 'digit' from
-	//character to integer form
-	function translate_symbol(digit) =
-		(digit=="0")?0:
-		(digit=="1")?1:
-		(digit=="2")?2:
-		(digit=="3")?3:
-		(digit=="4")?4:
-		(digit=="5")?5:
-		(digit=="6")?6:
-		(digit=="7")?7:
-		(digit=="8")?8:
-		(digit=="9")?9: undef;
-
 	//calculates the checkdigit by recursively
-	//parsing the 11-numeral string provided
+	//parsing the 11-digit vector provided
 	//i is incremented from 0 to 10
 	//i has a special default value of -1 to
 	//conduct some final processing on the answer
-	function calculate_checkdigit(string, i=-1) =
-		(i==10)?
-			translate_symbol(string[i])*3:
+	function calculate_checkdigit(digits, i=-1) =
+		(i==10)?digits[i]*3:
 		(i==-1)?
-			(0==calculate_checkdigit(string,i=0)%10)?
-				0:(10-calculate_checkdigit(string,i=0)%10)
+			(10-(calculate_checkdigit(digits,i=0)%10))%10
 		:
-			((i%2)?1:3)*translate_symbol(string[i])
-				+calculate_checkdigit(string, i+1);
+			(((10-i)%2)?1:3)*digits[i]
+				+calculate_checkdigit(digits, i+1);
+
+	digits = atoi(string);
+	draw_quiet_arrow = false;
+	do_assert((len(digits)==11) || (len(digits)==12),
+		"UPC string must be exactly 11 or 12 digits");
+
+	checkdigit = calculate_checkdigit(digits);
+	if (len(digits)==12 && digits[11] != checkdigit)
+		echo(str("WARNING: incorrect check digit supplied ", digits[11], "!=", checkdigit));
 
 	//returns the symbol to draw at position i
 	//i ranges from 0 to 16
-	function get_symbol(string, i) =
+	function get_symbol(digits, checkdigit, i) =
 		(i==0)?10:
 		(i==1)?11:
-		(i<8)?translate_symbol(string[i-2]):
+		(i<8)?digits[i-2]:
 		(i==8)?12:
-		(i<14)?translate_symbol(string[i-3]):
+		(i<14)?digits[i-3]:
 		(i==14)?
-			(len(string)>11)?
-				translate_symbol(string[i-3]):
-				calculate_checkdigit(string):
+			(len(digits)>11)?
+				digits[i-3]:
+				checkdigit:
 		(i==15)?11:
 		(i==16)?10: undef;
 
@@ -204,30 +193,39 @@ module UPC_A(string, bar=1, space=0, quiet_zone=0,
 	//returns whether odd or even parity should
 	//be used for the symbol in position i
 	//i ranges from 0 to 16
-	function get_parity(i) = ((i>8)&&(i<15))?false:true;
+	function get_parity(digits, i) = ((i>8)&&(i<15))?false:true;
+
+	//returns whether normal or reversed pattern
+	//should be used for the symbol in position i
+	//i ranges from 0 to 16
+	function get_reverse(digits, i) = false;
 
 	//draw individual upc symbol bars based on contents
 	//of supplied string
-	//string must contain 11 or 12 numerals
+	//digits vector must contain 11 or 12 numerals
 	//this module is then called recursively with
 	//i incrementing from 0 to 16
 	//x is also incremented to translate each symbol
 	//along the x-axis
-	module draw_symbol(string, bar=1, space=0, quiet_zone=0,
+	module draw_symbol(digits, checkdigit,
+		bar=1, space=0, quiet_zone=0,
 		vector_mode=vector_mode,
 		x=0, i=0)
 	{
 		translate([0,27.55-get_height(i),0])
 			scale([0.33, get_height(i), 1])
 				translate([x,0,0])
-					upc_symbol(symbol=get_symbol(string,i),
+					upc_symbol(
+						symbol=get_symbol(digits,checkdigit,i),
 						bar=bar, space=space, quiet_zone=quiet_zone,
 						vector_mode=vector_mode,
-						parity=get_parity(i));
+						parity=get_parity(digits, i),
+						reverse=get_reverse(digits, i));
 		if (i<16)
-			draw_symbol(string, bar, space, quiet_zone,
+			draw_symbol(digits, checkdigit,
+				bar, space, quiet_zone,
 				vector_mode,
-				x+upc_symbol_len(get_symbol(string,i)),
+				x+upc_symbol_len(get_symbol(digits,checkdigit,i)),
 				i+1);
 	}
 
@@ -257,20 +255,24 @@ module UPC_A(string, bar=1, space=0, quiet_zone=0,
 		0
 	];
 
-	//draw individual text numerals based on contents
-	//of supplied string
-	//string must contain 11 or 12 numerals
+	//draw individual text numerals
+	//digits must contain 11 or 12 numerals
 	//this module is then called recursively with
-	//i incrementing from 0 to 11
-	module draw_text(string, font, fontsize, i=0)
+	//i incrementing from 0 to 12
+	module draw_text(digits, checkdigit, draw_quiet_arrow,
+		font, fontsize, i=0)
 	{
-		numeral=string[i]?string[i]:
-			str(calculate_checkdigit(string));
-		translate(get_text_pos(i))
-			text(numeral, font=font, size=fontsize);
+		char = (i==12)?
+				(draw_quiet_arrow)?">":"":
+				(digits[i]!=undef)?
+			str(digits[i]):str(checkdigit);
 
-		if (i<11)
-			draw_text(string, font, fontsize, i+1);
+		translate(get_text_pos(i))
+			text(char, font=font, size=fontsize);
+
+		if (i<12)
+			draw_text(digits, checkdigit, draw_quiet_arrow,
+				font, fontsize, i+1);
 	}
 
 	module extrude_text(vector_mode, height)
@@ -282,14 +284,20 @@ module UPC_A(string, bar=1, space=0, quiet_zone=0,
 				children();
 	}
 
-	draw_symbol(string, bar=bar, space=space, quiet_zone=quiet_zone, vector_mode=vector_mode);
+	//preliminaries out of the way
+	//invoke the modules to draw the actual symbol
+	draw_symbol(digits, checkdigit,
+		bar=bar, space=space, quiet_zone=quiet_zone,
+		vector_mode=vector_mode);
 	if (font)
 		if (is_indexable(bar))
 			color(bar) extrude_text(vector_mode, 1)
-				draw_text(string, font, fontsize);
+				draw_text(digits, checkdigit, draw_quiet_arrow,
+					font, fontsize);
 		else
 			extrude_text(vector_mode, clamp_nonnum(bar))
-				draw_text(string, font, fontsize);
+				draw_text(digits, checkdigit, draw_quiet_arrow,
+					font, fontsize);
 }
 
 
@@ -506,7 +514,7 @@ module EAN_13(string, bar=1, space=0, quiet_zone=0,
 //UPC_A("04210000526", bar="black"); //checkdigit 4
 //UPC_A("12345678901", bar="black"); //checkdigit 2
 //UPC_A("01234554321", bar="black"); //checkdigit 0
-//UPC_A("012345543210", bar="black", vector_mode=true);
+UPC_A("012345543210", bar="black", vector_mode=true);
 //UPC_A("012345543210", bar=true);
 //UPC_A("012345543210", bar=3);
 //UPC_A("012345543210", bar=[.5,.8,.9]);
@@ -514,7 +522,7 @@ module EAN_13(string, bar=1, space=0, quiet_zone=0,
 //UPC_A("012345543210", bar=0);
 //UPC_A("012345543210");
 
-EAN_13("5901234123457>", bar="black");
+//EAN_13("5901234123457>", bar="black");
 //EAN_13("871125300120", bar=true); //checkdigit 2
 //EAN_13("8711253001202", bar=false);
 //EAN_13("8711253001202", bar=0);
