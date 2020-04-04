@@ -126,6 +126,27 @@ module upc_symbol(symbol, bar=1, space=0, quiet_zone=0,
 }
 
 /*
+ * calculate_checkdigit - calculate the checkdigit
+ *
+ * digits - vector of digits for the UPC code
+ * symbol_length - 12 for UPC-A, 13 for EAN-13
+ *
+ * Recursively add the weighted values for the digit
+ * vector and calculate the remainder modulo 10.
+ * i is the recursion index and is incremented from
+ * 0 to symbol_length-2.
+ * i=-1 is used to calculate the remainder after
+ * the recursive addition phase.
+ */
+function calculate_checkdigit(digits, symbol_length, i=-1) =
+	(i==symbol_length-2)?digits[i]*3:
+	(i==-1)?
+		(10-(calculate_checkdigit(digits, symbol_length, i=0)%10))%10
+	:
+		(((symbol_length-2-i)%2)?1:3)*digits[i]
+			+calculate_checkdigit(digits, symbol_length, i+1);
+
+/*
  * UPC_A - Generate a UPC-A barcode
  *
  * string - UPC digit string to encode
@@ -146,26 +167,12 @@ module UPC_A(string, bar=1, space=0, quiet_zone=0,
 	font="Liberation Mono:style=Bold", fontsize=1.5)
 {
 	symbol_length=12;
-
-	//calculates the checkdigit by recursively
-	//parsing the digit vector provided
-	//i is incremented from 0 to symbol_length-2
-	//i has a special default value of -1 to
-	//conduct some final processing on the answer
-	function calculate_checkdigit(digits, i=-1) =
-		(i==symbol_length-2)?digits[i]*3:
-		(i==-1)?
-			(10-(calculate_checkdigit(digits,i=0)%10))%10
-		:
-			(((symbol_length-2-i)%2)?1:3)*digits[i]
-				+calculate_checkdigit(digits, i+1);
-
 	digits = atoi(string);
 	draw_quiet_arrow = false;
 	do_assert((len(digits)==(symbol_length-1)) || (len(digits)==symbol_length),
 		"UPC string must be exactly 11 or 12 digits");
 
-	checkdigit = calculate_checkdigit(digits);
+	checkdigit = calculate_checkdigit(digits, symbol_length);
 	if (len(digits)==symbol_length && digits[symbol_length-1] != checkdigit)
 		echo(str("WARNING: incorrect check digit supplied ", digits[symbol_length-1], "!=", checkdigit));
 
@@ -345,26 +352,12 @@ module EAN_13(string, bar=1, space=0, quiet_zone=0,
 	font="Liberation Mono:style=Bold", fontsize=1.5)
 {
 	symbol_length=13;
-
-	//calculates the checkdigit by recursively
-	//parsing the digit vector provided
-	//i is incremented from 0 to symbol_length-2
-	//i has a special default value of -1 to
-	//conduct some final processing on the answer
-	function calculate_checkdigit(digits, i=-1) =
-		(i==symbol_length-2)?digits[i]*3:
-		(i==-1)?
-			(10-(calculate_checkdigit(digits,i=0)%10))%10
-		:
-			(((symbol_length-2-i)%2)?1:3)*digits[i]
-				+calculate_checkdigit(digits, i+1);
-
 	digits = atoi(string);
 	draw_quiet_arrow = (string[len(string)-1]==">");
 	do_assert((len(digits)==(symbol_length-1)) || (len(digits)==symbol_length),
 		"GTIN string must be exactly 12 or 13 digits");
 
-	checkdigit = calculate_checkdigit(digits);
+	checkdigit = calculate_checkdigit(digits, symbol_length);
 	if (len(digits)==symbol_length && digits[symbol_length-1] != checkdigit)
 		echo(str("WARNING: incorrect check digit supplied ", digits[symbol_length-1], "!=", checkdigit));
 
