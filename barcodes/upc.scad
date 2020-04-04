@@ -79,6 +79,24 @@ symbol_vector = [
 ];
 
 /*
+ * encoding structure for first digit of EAN-13 GTIN
+ * 0 indicates normal-odd parity (L)
+ * 1 indicates reversed-even parity (G)
+ */
+ean_13_reverse_vector = [
+	[0,0,0,0,0,0], // first digit 0
+	[0,0,1,0,1,1], // first digit 1
+	[0,0,1,1,0,1], // first digit 2
+	[0,0,1,1,1,0], // first digit 3
+	[0,1,0,0,1,1], // first digit 4
+	[0,1,1,0,0,1], // first digit 5
+	[0,1,1,1,0,0], // first digit 6
+	[0,1,0,1,0,1], // first digit 7
+	[0,1,0,1,1,0], // first digit 8
+	[0,1,1,0,1,0], // first digit 9
+];
+
+/*
  * upc_symbol_len - return length of a given symbol
  *
  * symbol - integer 00-22
@@ -146,11 +164,15 @@ function calculate_checkdigit(digits, symbol_length, i=-1) =
 		(((symbol_length-2-i)%2)?1:3)*digits[i]
 			+calculate_checkdigit(digits, symbol_length, i+1);
 
+
 /*
- * UPC_A - Generate a UPC-A barcode
+ * UPC_base - base implementation for UPC_A and EAN_13
  *
- * string - UPC digit string to encode
- *   string of digits of length 11 or 12
+ * digits - UPC digit vector
+ * mode - mode indicator
+ *        0 for UPC-A,
+ *        1 for EAN-13,
+ *        2 for EAN-13 with quiet zone indicator (>)
  * 
  * bar - bar representation
  * space - space representation
@@ -162,15 +184,13 @@ function calculate_checkdigit(digits, symbol_length, i=-1) =
  *   set to undef if you do not want any text
  * fontsize - font size to use
  */
-module UPC_A(string, bar=1, space=0, quiet_zone=0,
+module UPC_base(digits, mode,
+	bar=1, space=0, quiet_zone=0,
 	vector_mode=false,
 	font="Liberation Mono:style=Bold", fontsize=1.5)
 {
-	symbol_length=12;
-	digits = atoi(string);
-	draw_quiet_arrow = false;
-	do_assert((len(digits)==(symbol_length-1)) || (len(digits)==symbol_length),
-		"UPC string must be exactly 11 or 12 digits");
+	symbol_length = (mode==0)?12:13;
+	draw_quiet_arrow = (mode==2)?true:false;
 
 	checkdigit = calculate_checkdigit(digits, symbol_length);
 	if (len(digits)==symbol_length && digits[symbol_length-1] != checkdigit)
@@ -202,12 +222,34 @@ module UPC_A(string, bar=1, space=0, quiet_zone=0,
 	//returns whether odd or even parity should
 	//be used for the symbol in position i
 	//i ranges from 0 to 16
-	function get_parity(digits, i) = ((i>8)&&(i<15))?false:true;
+	function get_parity(digits, i) = (mode==0)? (
+		//upc-a
+		((i>8)&&(i<15))?false:true
+	) : (
+		//ean-13
+		((i>8)&&(i<15))?false:
+		((i>1)&&(i<8))?
+			ean_13_reverse_vector[digits[0]][i-2]?
+				false:
+				true:
+			true
+	);
 
 	//returns whether normal or reversed pattern
 	//should be used for the symbol in position i
 	//i ranges from 0 to 16
-	function get_reverse(digits, i) = false;
+	function get_reverse(digits, i) = (mode==0)? (
+		//upc-a
+		false
+	) : (
+		//ean-13
+		((i>8)&&(i<15))?false:
+		((i>1)&&(i<8))?
+			ean_13_reverse_vector[digits[0]][i-2]?
+				true:
+				false:
+			false
+	);
 
 	//draw individual upc symbol bars based on contents
 	//of supplied string
@@ -240,8 +282,9 @@ module UPC_A(string, bar=1, space=0, quiet_zone=0,
 	}
 
 	//returns the position x/y for the text digit in
-	//position i ranging from 0 to 11
-	function get_text_pos(i) =
+	//position i can rang from 0 to 11 (UPC-A)
+	//or from 0 to 13 (EAN-13)
+	function get_text_pos(i) = (mode==0)? (
 	[
 		0.33*(
 			(i==0)?0:
@@ -263,7 +306,30 @@ module UPC_A(string, bar=1, space=0, quiet_zone=0,
 		(i==0)?(27.55-25.9):
 		(i==11)?(27.55-25.9):0,
 		0
-	];
+	]
+	) : (
+	[
+		0.33*(
+			(i==0)?0:
+			(i<7)?(
+				upc_symbol_len(10)+upc_symbol_len(11)+
+				upc_symbol_len(0)*(i-1+0.25)
+			):
+			(i<13)?(
+				upc_symbol_len(10)+upc_symbol_len(11)+
+				upc_symbol_len(12)+
+				upc_symbol_len(0)*(i-1+0.25)
+			):
+			(
+				upc_symbol_len(10)+upc_symbol_len(11)+
+				upc_symbol_len(12)+upc_symbol_len(11)+
+				upc_symbol_len(0)*(i-1+0.25)
+			)
+		),
+		0,
+		0
+	]
+	);
 
 	//draw individual text numerals
 	//digits vector must contain symbol_length
@@ -313,22 +379,34 @@ module UPC_A(string, bar=1, space=0, quiet_zone=0,
 
 
 /*
- * encoding structure for first digit of EAN-13 GTIN
- * 0 indicates normal-odd parity (L)
- * 1 indicates reversed-even parity (G)
+ * UPC_A - Generate a UPC-A barcode
+ *
+ * string - UPC digit string to encode
+ *   string of digits of length 11 or 12
+ *
+ * bar - bar representation
+ * space - space representation
+ * quiet_zone - representation for quiet zone
+ * (see documentation in bitmap.scad)
+ *
+ * vector_mode - create a 2D vector drawing instead of 3D extrusion
+ * font - font to use for decimal digits below each symbol
+ *   set to undef if you do not want any text
+ * fontsize - font size to use
  */
-ean_13_reverse_vector = [
-	[0,0,0,0,0,0], // first digit 0
-	[0,0,1,0,1,1], // first digit 1
-	[0,0,1,1,0,1], // first digit 2
-	[0,0,1,1,1,0], // first digit 3
-	[0,1,0,0,1,1], // first digit 4
-	[0,1,1,0,0,1], // first digit 5
-	[0,1,1,1,0,0], // first digit 6
-	[0,1,0,1,0,1], // first digit 7
-	[0,1,0,1,1,0], // first digit 8
-	[0,1,1,0,1,0], // first digit 9
-];
+module UPC_A(string, bar=1, space=0, quiet_zone=0,
+	vector_mode=false,
+	font="Liberation Mono:style=Bold", fontsize=1.5)
+{
+	digits = atoi(string);
+	do_assert((len(digits)==(11)) || (len(digits)==12),
+		"UPC string must be exactly 11 or 12 digits");
+
+	UPC_base(digits, mode=0,
+		bar=bar, space=space, quiet_zone=quiet_zone,
+		vector_mode=vector_mode,
+		font=font, fontsize=fontsize);
+}
 
 /*
  * EAN_13 - Generate an EAN-13 barcode
@@ -351,160 +429,15 @@ module EAN_13(string, bar=1, space=0, quiet_zone=0,
 	vector_mode=false,
 	font="Liberation Mono:style=Bold", fontsize=1.5)
 {
-	symbol_length=13;
 	digits = atoi(string);
 	draw_quiet_arrow = (string[len(string)-1]==">");
-	do_assert((len(digits)==(symbol_length-1)) || (len(digits)==symbol_length),
+	do_assert((len(digits)==12) || (len(digits)==13),
 		"GTIN string must be exactly 12 or 13 digits");
 
-	checkdigit = calculate_checkdigit(digits, symbol_length);
-	if (len(digits)==symbol_length && digits[symbol_length-1] != checkdigit)
-		echo(str("WARNING: incorrect check digit supplied ", digits[symbol_length-1], "!=", checkdigit));
-
-	//returns the symbol to draw at position i
-	//i ranges from 0 to 16
-	function get_symbol(digits, checkdigit, i) =
-		(i==0)?10:
-		(i==1)?11:
-		(i<8)?digits[i-(14-symbol_length)]:
-		(i==8)?12:
-		(i<14)?digits[i-(15-symbol_length)]:
-		(i==14)?
-			(len(digits)>(symbol_length-1))?
-				digits[symbol_length-1]:
-				checkdigit:
-		(i==15)?11:
-		(i==16)?10: undef;
-
-	//returns nominal symbol height for the
-	//symbol in position i
-	//i ranges from 0 to 16
-	function get_height(i) =
-		(i<(15-symbol_length))?27.55:
-		(i==8)?27.55:
-		(i>(symbol_length+1))?27.55: 25.9;
-
-	//returns whether odd or even parity should
-	//be used for the symbol in position i
-	//i ranges from 0 to 16
-	function get_parity(digits, i) =
-		((i>8)&&(i<15))?false:
-		((i>1)&&(i<8))?
-			ean_13_reverse_vector[digits[0]][i-2]?
-				false:
-				true:
-			true;
-
-	//returns whether normal or reversed pattern
-	//should be used for the symbol in position i
-	//i ranges from 0 to 16
-	function get_reverse(digits, i) =
-		((i>8)&&(i<15))?false:
-		((i>1)&&(i<8))?
-			ean_13_reverse_vector[digits[0]][i-2]?
-				true:
-				false:
-			false;
-
-	//draw individual upc symbol bars based on contents
-	//of supplied string
-	//digits vector must contain symbol_length
-	//(or symbol_length-1) numerals
-	//this module is then called recursively with
-	//i incrementing from 0 to 16
-	//x is also incremented to translate each symbol
-	//along the x-axis
-	module draw_symbol(digits, checkdigit,
-		bar=1, space=0, quiet_zone=0,
-		vector_mode=vector_mode,
-		x=0, i=0)
-	{
-		translate([0,27.55-get_height(i),0])
-			scale([0.33, get_height(i), 1])
-				translate([x,0,0])
-					upc_symbol(
-						symbol=get_symbol(digits,checkdigit,i),
-						bar=bar, space=space, quiet_zone=quiet_zone,
-						vector_mode=vector_mode,
-						parity=get_parity(digits, i),
-						reverse=get_reverse(digits, i));
-		if (i<16)
-			draw_symbol(digits, checkdigit,
-				bar, space, quiet_zone,
-				vector_mode,
-				x+upc_symbol_len(get_symbol(digits,checkdigit,i)),
-				i+1);
-	}
-
-	//returns the position x/y for the text digit in
-	//position i ranging from 0 to 13
-	function get_text_pos(i) =
-	[
-		0.33*(
-			(i==0)?0:
-			(i<7)?(
-				upc_symbol_len(10)+upc_symbol_len(11)+
-				upc_symbol_len(0)*(i-1+0.25)
-			):
-			(i<13)?(
-				upc_symbol_len(10)+upc_symbol_len(11)+
-				upc_symbol_len(12)+
-				upc_symbol_len(0)*(i-1+0.25)
-			):
-			(
-				upc_symbol_len(10)+upc_symbol_len(11)+
-				upc_symbol_len(12)+upc_symbol_len(11)+
-				upc_symbol_len(0)*(i-1+0.25)
-			)
-		),
-		0,
-		0
-	];
-
-	//draw individual text numerals
-	//digits vector must contain symbol_length
-	//(or symbol_length-1) numerals
-	//this module is then called recursively with
-	//i incrementing from 0 to symbol_length
-	module draw_text(digits, checkdigit, draw_quiet_arrow,
-		font, fontsize, i=0)
-	{
-		char = (i==symbol_length)?
-				(draw_quiet_arrow)?">":"":
-				(digits[i]!=undef)?
-					str(digits[i]):str(checkdigit);
-
-		translate(get_text_pos(i))
-			text(char, font=font, size=fontsize);
-
-		if (i<symbol_length)
-			draw_text(digits, checkdigit, draw_quiet_arrow,
-				font, fontsize, i+1);
-	}
-
-	module extrude_text(vector_mode, height)
-	{
-		if (vector_mode)
-			children();
-		else
-			linear_extrude(height)
-				children();
-	}
-
-	//preliminaries out of the way
-	//invoke the modules to draw the actual symbol
-	draw_symbol(digits, checkdigit,
+	UPC_base(digits, mode=(draw_quiet_arrow)?2:1,
 		bar=bar, space=space, quiet_zone=quiet_zone,
-		vector_mode=vector_mode);
-	if (font)
-		if (is_indexable(bar))
-			color(bar) extrude_text(vector_mode, 1)
-				draw_text(digits, checkdigit, draw_quiet_arrow,
-					font, fontsize);
-		else
-			extrude_text(vector_mode, clamp_nonnum(bar))
-				draw_text(digits, checkdigit, draw_quiet_arrow,
-					font, fontsize);
+		vector_mode=vector_mode,
+		font=font, fontsize=fontsize);
 }
 
 
