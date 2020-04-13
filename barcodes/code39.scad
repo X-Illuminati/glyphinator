@@ -19,7 +19,6 @@
  *****************************************************************************
  * Usage:
  * Include this file with the "use" tag.
- * Depends on bitmap.scad library.
  *
  * API:
  *   code39(code, height, unit, text)
@@ -30,7 +29,7 @@
  *           entire code centered under barcode
  *
  *****************************************************************************/
-use <../util/bitmap.scad>
+
 
 /*
  * 2D Vector of supported Code 39 characters
@@ -177,14 +176,16 @@ module code39_symbol(char, height=10) {
 	bar = bar_vector[idxs[0]];
 	space_idx = get_space_vector_idx(idxs[0]);
 	space = space_vector[space_idx][idxs[1]];
-	for(i = [0:len(bar)-1]) {
+	bar_vector = [
+	for(i = [0:len(bar)-1])
 		let(
 			bar_width = get_bar_fragment_width(i, space, bar, include_space=false),
 			bar_offset = get_bar_offset(i, space, bar)
-		) {
-			translate([bar_offset, 0])
-				square([bar_width, height]);
-		}
+		) [bar_width, bar_offset]
+	];
+	for(i = [0:len(bar)-1]) {
+		translate([bar_vector[i][1], 0])
+			square([bar_vector[i][0], height]);
 	}
 }
 
