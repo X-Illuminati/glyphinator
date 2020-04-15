@@ -305,3 +305,65 @@ do_assert(cs128_fnc4_high_helper("\u0081\u0082\u0083\u0084\u0085\u0086\u0087\u00
 	== "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\x7f",
 	"cs128_fnc4_high_helper test 03");
 
+
+/*
+ * code_128 - Generate a Code 128 / GS1-128 barcode
+ *
+ * codepoints - vector of codepoints to encode
+ *   see the other helper functions in this file for API to generate this vector
+ *
+ * bar - bar representation
+ * space - space representation
+ * quiet_zone - representation for quiet zone
+ * (see documentation in bitmap.scad)
+ *
+ * vector_mode - create a 2D vector drawing instead of 3D extrusion
+ * expert_mode - only use this if you are an expert
+ */
+module code_128(codepoints, bar=1, space=0, quiet_zone=0, vector_mode=false,
+	expert_mode=false)
+{
+	if (codepoints[0] != START_A()
+		&& codepoints[0] != START_B()
+		&& codepoints[0] != START_C())
+		echo("WARNING: codepoints does not begin with a valide START symbol");
+
+	norm_vec = [
+		QUIET(),
+		for(i=[0:len(codepoints)-1])
+			(i>0 && codepoints[i]==START_A())? CODE_A():
+			(i>0 && codepoints[i]==START_B())? CODE_B():
+			(i>0 && codepoints[i]==START_C())? CODE_C():
+			codepoints[i],
+		/* TODO: Checksum */
+		STOP(),
+		QUIET()
+	];
+	echo(norm_vec);
+}
+
+
+/* examples */
+//B - RI 476 394 652 CH
+code_128(cs128_b("RI 476 394 652 CH"));
+//A - PJJ123C
+code_128(cs128_a("PJJ123C"));
+//B - Wikipedia
+code_128(cs128_b("Wikipedia"));
+//B - Wikipedia
+code_128(concat(cs128_b("W"), cs128_b("ikipedia", concatenating=true)));
+//A - W-ikipedia
+code_128(concat(cs128_a("W"), cs128_b("ikipedia")));
+//B - Wiki^Pedia
+code_128(concat(cs128_b("Wiki"), cs128_shift_a("P"), cs128_b("edia", concatenating=true)));
+//C - 4218402050-0
+code_128(concat(cs128_c([FNC1(), 4,2, 1,8, 4,0, 2,0, 5,0]), cs128_a("0")));
+//B - X00Y
+code_128(cs128_b("X00Y"));
+//B - X-00-Y
+code_128(concat(cs128_b("X"), cs128_c([0,0]), cs128_b("Y")));
+//A - ABC¡!¢£¤¥Þ^ÀÁÂÃXYZ
+code_128(cs128_a(str("ABC", FNC4(), cs128_fnc4_high_helper("¡"), "!",
+	cs128_fnc4_high_helper(str(FNC4(), FNC4(), "¢£¤¥Þ", FNC4())), "^",
+	cs128_fnc4_high_helper("ÀÁÂÃ"), FNC4(), FNC4(), "XYZ")));
+code_128([1, 16, 33, 73, 99, 58]);
