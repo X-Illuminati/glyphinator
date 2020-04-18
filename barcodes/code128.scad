@@ -307,6 +307,23 @@ do_assert(cs128_fnc4_high_helper("\u0081\u0082\u0083\u0084\u0085\u0086\u0087\u00
 
 
 /*
+ * calculate_checkdigit - calculate the checkdigit
+ *
+ * symbols - vector of symbols for the Code 128 barcode
+ *
+ * Recursively add the weighted values for the symbols vector and calculate
+ * the remainder modulo 103.
+ * i is the recursion index and is incremented from 0 to len(symbols)-1.
+ * i=-1 is used to calculate the remainder after the recursive addition phase.
+ */
+function calculate_checkdigit(symbols, i=-1) =
+	(i==len(symbols)-1)?
+		symbols[i]*i:
+	(i==-1)?
+		(calculate_checkdigit(symbols, i=0)%103):
+	symbols[i]*((i==0)?1:i) + calculate_checkdigit(symbols, i+1);
+
+/*
  * code_128 - Generate a Code 128 / GS1-128 barcode
  *
  * codepoints - vector of codepoints to encode
@@ -323,32 +340,44 @@ do_assert(cs128_fnc4_high_helper("\u0081\u0082\u0083\u0084\u0085\u0086\u0087\u00
 module code_128(codepoints, bar=1, space=0, quiet_zone=0, vector_mode=false,
 	expert_mode=false)
 {
-	if (codepoints[0] != START_A()
+	start_check = codepoints[0] != START_A()
 		&& codepoints[0] != START_B()
-		&& codepoints[0] != START_C())
-		echo("WARNING: codepoints does not begin with a valide START symbol");
+		&& codepoints[0] != START_C();
 
-	norm_vec = [
-		QUIET(),
-		for(i=[0:len(codepoints)-1])
-			(i>0 && codepoints[i]==START_A())? CODE_A():
-			(i>0 && codepoints[i]==START_B())? CODE_B():
-			(i>0 && codepoints[i]==START_C())? CODE_C():
-			codepoints[i],
-		/* TODO: Checksum */
-		STOP(),
-		QUIET()
-	];
-	echo(norm_vec);
+	if (!expert_mode)
+		do_assert(!start_check, "Code 128 does not begin with a valide START symbol");
+
+	norm_vec = (expert_mode)?
+		codepoints
+		:
+		[
+			for(i=[0:len(codepoints)-1])
+				(i>0 && codepoints[i]==START_A())? CODE_A():
+				(i>0 && codepoints[i]==START_B())? CODE_B():
+				(i>0 && codepoints[i]==START_C())? CODE_C():
+				codepoints[i],
+		];
+
+	c128_vec = (expert_mode)?
+		codepoints
+		:
+		[
+			QUIET(),
+			for(i=norm_vec) i,
+			calculate_checkdigit(norm_vec),
+			STOP(),
+			QUIET()
+		];
+	echo(c128_vec);
 }
 
 
 /* examples */
 //B - RI 476 394 652 CH
 code_128(cs128_b("RI 476 394 652 CH"));
-//A - PJJ123C
+//A - PJJ123C			(checkdigit 54)
 code_128(cs128_a("PJJ123C"));
-//B - Wikipedia
+//B - Wikipedia			(checkdigit 88)
 code_128(cs128_b("Wikipedia"));
 //B - Wikipedia
 code_128(concat(cs128_b("W"), cs128_b("ikipedia", concatenating=true)));
@@ -356,7 +385,7 @@ code_128(concat(cs128_b("W"), cs128_b("ikipedia", concatenating=true)));
 code_128(concat(cs128_a("W"), cs128_b("ikipedia")));
 //B - Wiki^Pedia
 code_128(concat(cs128_b("Wiki"), cs128_shift_a("P"), cs128_b("edia", concatenating=true)));
-//C - 4218402050-0
+//C - 4218402050-0		(checkdigit 92)
 code_128(concat(cs128_c([FNC1(), 4,2, 1,8, 4,0, 2,0, 5,0]), cs128_a("0")));
 //B - X00Y
 code_128(cs128_b("X00Y"));
@@ -366,4 +395,8 @@ code_128(concat(cs128_b("X"), cs128_c([0,0]), cs128_b("Y")));
 code_128(cs128_a(str("ABC", FNC4(), cs128_fnc4_high_helper("¡"), "!",
 	cs128_fnc4_high_helper(str(FNC4(), FNC4(), "¢£¤¥Þ", FNC4())), "^",
 	cs128_fnc4_high_helper("ÀÁÂÃ"), FNC4(), FNC4(), "XYZ")));
-code_128([1, 16, 33, 73, 99, 58]);
+//Invalid Start - remove expert_mode flag to test assert
+code_128([1, 16, 33, 73, 99, 58], expert_mode=true);
+//A - PJJ123C			(expert mode example)
+code_128([QUIET(),START_A(),48,42,42,17,18,19,35,54,STOP(),QUIET()],
+	expert_mode=true);
