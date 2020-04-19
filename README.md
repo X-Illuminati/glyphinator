@@ -5,7 +5,9 @@ https://github.com/X-Illuminati/glyphinator/
 ## Usage
 Supported barcodes:
 * UPC-A
-* Code-39
+* EAN-13
+* Code 39
+* Code 128
 * DataMatrix (ECC200)
 * Quick Response 2D barcodes
 
@@ -31,7 +33,7 @@ EAN_13("012345678901>");
 ![EAN-13 Example](doc/ean_13-example.png)
 ![EAN_13 Example](doc/ean_13-example2.png)
 
-### Code-39
+### Code 39
 Include code39.scad in your model with the use command.
 See the documentation in [code39.scad](barcodes/code39.scad) for more details.
 ```
@@ -39,8 +41,19 @@ use <barcodes/code39.scad>
 code39("*A-123*", height=40, text="centered");
 ```
 
-![Code-39 Example](doc/code39-example.png)
-![Code-39 Example](doc/code39-example2.png)
+![Code 39 Example](doc/code39-example.png)
+![Code 39 Example](doc/code39-example2.png)
+
+### Code 128
+Include code128.scad in your model with the use command.
+See the documentation in [code128.scad](barcodes/code128.scad) for more details.
+```
+use <barcodes/code128.scad>
+code_128(cs128_c([1,2,3,4]), bar="black");
+```
+
+![Code 128 Example](doc/code_128-example.png)
+![Code 128 Example](doc/code_128-example2.png)
 
 ### DataMatrix
 Include datamatrix.scad in your model with the use command.
@@ -70,6 +83,7 @@ quick_response(qr_numeric([0,1,2,3,4,5,6,7,8,9]));
 OpenSCAD can generate 2D vector graphics with a few caveats.
 To generate any of the barcodes using 2D vector geometry rather than 3D solid
 geometry, simply add `vector_mode=true` to the barcode module parameters.
+Note: not currently supported by Code 39 implementation.
 
 ## Software License
 Glyphinator is free software: you can redistribute it and/or modify
