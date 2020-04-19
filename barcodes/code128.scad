@@ -92,6 +92,7 @@
  *
  *****************************************************************************/
 use <../util/compat.scad>
+use <../util/bitmap.scad>
 
 
 /* Some potentially useful definitions */
@@ -110,8 +111,130 @@ function CODE_B()  = 100;
 function CODE_C()  = 99;
 function SHIFT_A() = 98;
 function SHIFT_B() = 98;
-function STOP()    = 107;
-function QUIET()   = 108;
+function STOP()    = 106;
+function QUIET()   = 107;
+
+/*
+ * symbol definitions arranged in a convenient array
+ * 1 indicates bar
+ * 0 indicates space
+ *
+ * symbols:
+ * 00-102 - normal symbols
+ * 103-105 - start symbols
+ * 106 - stop pattern
+ * 107 - quiet zone spacing
+ */
+symbol_vector = [
+	[1,1,0,1,1,0,0,1,1,0,0],     //  0 -         /         / 00
+	[1,1,0,0,1,1,0,1,1,0,0],     //  1 -     !   /    !    / 01
+	[1,1,0,0,1,1,0,0,1,1,0],     //  2 -     "   /    "    / 02
+	[1,0,0,1,0,0,1,1,0,0,0],     //  3 -     #   /    #    / 03
+	[1,0,0,1,0,0,0,1,1,0,0],     //  4 -     $   /    $    / 04
+	[1,0,0,0,1,0,0,1,1,0,0],     //  5 -     %   /    %    / 05
+	[1,0,0,1,1,0,0,1,0,0,0],     //  6 -     &   /    &    / 06
+	[1,0,0,1,1,0,0,0,1,0,0],     //  7 -     '   /    '    / 07
+	[1,0,0,0,1,1,0,0,1,0,0],     //  8 -     (   /    (    / 08
+	[1,1,0,0,1,0,0,1,0,0,0],     //  9 -     )   /    )    / 09
+	[1,1,0,0,1,0,0,0,1,0,0],     // 10 -     *   /    *    / 10
+	[1,1,0,0,0,1,0,0,1,0,0],     // 11 -     +   /    +    / 11
+	[1,0,1,1,0,0,1,1,1,0,0],     // 12 -     ,   /    ,    / 12
+	[1,0,0,1,1,0,1,1,1,0,0],     // 13 -     -   /    -    / 13
+	[1,0,0,1,1,0,0,1,1,1,0],     // 14 -     .   /    .    / 14
+	[1,0,1,1,1,0,0,1,1,0,0],     // 15 -     /   /    /    / 15
+	[1,0,0,1,1,1,0,1,1,0,0],     // 16 -     0   /    0    / 16
+	[1,0,0,1,1,1,0,0,1,1,0],     // 17 -     1   /    1    / 17
+	[1,1,0,0,1,1,1,0,0,1,0],     // 18 -     2   /    2    / 18
+	[1,1,0,0,1,0,1,1,1,0,0],     // 19 -     3   /    3    / 19
+	[1,1,0,0,1,0,0,1,1,1,0],     // 20 -     4   /    4    / 20
+	[1,1,0,1,1,1,0,0,1,0,0],     // 21 -     5   /    5    / 21
+	[1,1,0,0,1,1,1,0,1,0,0],     // 22 -     6   /    6    / 22
+	[1,1,1,0,1,1,0,1,1,1,0],     // 23 -     7   /    7    / 23
+	[1,1,1,0,1,0,0,1,1,0,0],     // 24 -     8   /    8    / 24
+	[1,1,1,0,0,1,0,1,1,0,0],     // 25 -     9   /    9    / 25
+	[1,1,1,0,0,1,0,0,1,1,0],     // 26 -     :   /    :    / 26
+	[1,1,1,0,1,1,0,0,1,0,0],     // 27 -     ;   /    ;    / 27
+	[1,1,1,0,0,1,1,0,1,0,0],     // 28 -     <   /    <    / 28
+	[1,1,1,0,0,1,1,0,0,1,0],     // 29 -     =   /    =    / 29
+	[1,1,0,1,1,0,1,1,0,0,0],     // 30 -     >   /    >    / 30
+	[1,1,0,1,1,0,0,0,1,1,0],     // 31 -     ?   /    ?    / 31
+	[1,1,0,0,0,1,1,0,1,1,0],     // 32 -     @   /    @    / 32
+	[1,0,1,0,0,0,1,1,0,0,0],     // 33 -     A   /    A    / 33
+	[1,0,0,0,1,0,1,1,0,0,0],     // 34 -     B   /    B    / 34
+	[1,0,0,0,1,0,0,0,1,1,0],     // 35 -     C   /    C    / 35
+	[1,0,1,1,0,0,0,1,0,0,0],     // 36 -     D   /    D    / 36
+	[1,0,0,0,1,1,0,1,0,0,0],     // 37 -     E   /    E    / 37
+	[1,0,0,0,1,1,0,0,0,1,0],     // 38 -     F   /    F    / 38
+	[1,1,0,1,0,0,0,1,0,0,0],     // 39 -     G   /    G    / 39
+	[1,1,0,0,0,1,0,1,0,0,0],     // 40 -     H   /    H    / 40
+	[1,1,0,0,0,1,0,0,0,1,0],     // 41 -     I   /    I    / 41
+	[1,0,1,1,0,1,1,1,0,0,0],     // 42 -     J   /    J    / 42
+	[1,0,1,1,0,0,0,1,1,1,0],     // 43 -     K   /    K    / 43
+	[1,0,0,0,1,1,0,1,1,1,0],     // 44 -     L   /    L    / 44
+	[1,0,1,1,1,0,1,1,0,0,0],     // 45 -     M   /    M    / 45
+	[1,0,1,1,1,0,0,0,1,1,0],     // 46 -     N   /    N    / 46
+	[1,0,0,0,1,1,1,0,1,1,0],     // 47 -     O   /    O    / 47
+	[1,1,1,0,1,1,1,0,1,1,0],     // 48 -     P   /    P    / 48
+	[1,1,0,1,0,0,0,1,1,1,0],     // 49 -     Q   /    Q    / 49
+	[1,1,0,0,0,1,0,1,1,1,0],     // 50 -     R   /    R    / 50
+	[1,1,0,1,1,1,0,1,0,0,0],     // 51 -     S   /    S    / 51
+	[1,1,0,1,1,1,0,0,0,1,0],     // 52 -     T   /    T    / 52
+	[1,1,0,1,1,1,0,1,1,1,0],     // 53 -     U   /    U    / 53
+	[1,1,1,0,1,0,1,1,0,0,0],     // 54 -     V   /    V    / 54
+	[1,1,1,0,1,0,0,0,1,1,0],     // 55 -     W   /    W    / 55
+	[1,1,1,0,0,0,1,0,1,1,0],     // 56 -     X   /    X    / 56
+	[1,1,1,0,1,1,0,1,0,0,0],     // 57 -     Y   /    Y    / 57
+	[1,1,1,0,1,1,0,0,0,1,0],     // 58 -     Z   /    Z    / 58
+	[1,1,1,0,0,0,1,1,0,1,0],     // 59 -     [   /    [    / 59
+	[1,1,1,0,1,1,1,1,0,1,0],     // 60 -     \   /    \    / 60
+	[1,1,0,0,1,0,0,0,0,1,0],     // 61 -     ]   /    ]    / 61
+	[1,1,1,1,0,0,0,1,0,1,0],     // 62 -     ^   /    ^    / 62
+	[1,0,1,0,0,1,1,0,0,0,0],     // 63 -     _   /    _    / 63
+	[1,0,1,0,0,0,0,1,1,0,0],     // 64 -   NUL   /    `    / 64
+	[1,0,0,1,0,1,1,0,0,0,0],     // 65 -   SOH   /    a    / 65
+	[1,0,0,1,0,0,0,0,1,1,0],     // 66 -   STX   /    b    / 66
+	[1,0,0,0,0,1,0,1,1,0,0],     // 67 -   ETX   /    c    / 67
+	[1,0,0,0,0,1,0,0,1,1,0],     // 68 -   EOT   /    d    / 68
+	[1,0,1,1,0,0,1,0,0,0,0],     // 69 -   ENQ   /    e    / 69
+	[1,0,1,1,0,0,0,0,1,0,0],     // 70 -   ACK   /    f    / 70
+	[1,0,0,1,1,0,1,0,0,0,0],     // 71 -   BEL   /    g    / 71
+	[1,0,0,1,1,0,0,0,0,1,0],     // 72 -    BS   /    h    / 72
+	[1,0,0,0,0,1,1,0,1,0,0],     // 73 -    HT   /    i    / 73
+	[1,0,0,0,0,1,1,0,0,1,0],     // 74 -    LF   /    j    / 74
+	[1,1,0,0,0,0,1,0,0,1,0],     // 75 -    VT   /    k    / 75
+	[1,1,0,0,1,0,1,0,0,0,0],     // 76 -    FF   /    l    / 76
+	[1,1,1,1,0,1,1,1,0,1,0],     // 77 -    CR   /    m    / 77
+	[1,1,0,0,0,0,1,0,1,0,0],     // 78 -    SO   /    n    / 78
+	[1,0,0,0,1,1,1,1,0,1,0],     // 79 -    SI   /    o    / 79
+	[1,0,1,0,0,1,1,1,1,0,0],     // 80 -   DLE   /    p    / 80
+	[1,0,0,1,0,1,1,1,1,0,0],     // 81 -   DC1   /    q    / 81
+	[1,0,0,1,0,0,1,1,1,1,0],     // 82 -   DC2   /    r    / 82
+	[1,0,1,1,1,1,0,0,1,0,0],     // 83 -   DC3   /    s    / 83
+	[1,0,0,1,1,1,1,0,1,0,0],     // 84 -   DC4   /    t    / 84
+	[1,0,0,1,1,1,1,0,0,1,0],     // 85 -   NAK   /    u    / 85
+	[1,1,1,1,0,1,0,0,1,0,0],     // 86 -   SYN   /    v    / 86
+	[1,1,1,1,0,0,1,0,1,0,0],     // 87 -   ETB   /    w    / 87
+	[1,1,1,1,0,0,1,0,0,1,0],     // 88 -   CAN   /    x    / 88
+	[1,1,0,1,1,0,1,1,1,1,0],     // 89 -    EM   /    y    / 89
+	[1,1,0,1,1,1,1,0,1,1,0],     // 90 -   SUB   /    z    / 90
+	[1,1,1,1,0,1,1,0,1,1,0],     // 91 -   ESC   /    {    / 91
+	[1,0,1,0,1,1,1,1,0,0,0],     // 92 -    FS   /    |    / 92
+	[1,0,1,0,0,0,1,1,1,1,0],     // 93 -    GS   /    }    / 93
+	[1,0,0,0,1,0,1,1,1,1,0],     // 94 -    RS   /    ~    / 94
+	[1,0,1,1,1,1,0,1,0,0,0],     // 95 -    US   / DEL     / 95
+	[1,0,1,1,1,1,0,0,0,1,0],     // 96 - FNC 3   / FNC 3   / 96
+	[1,1,1,1,0,1,0,1,0,0,0],     // 97 - FNC 2   / FNC 2   / 97
+	[1,1,1,1,0,1,0,0,0,1,0],     // 98 - Shift B / Shift A / 98
+	[1,0,1,1,1,0,1,1,1,1,0],     // 99 - Code C  / Code C  / 99
+	[1,0,1,1,1,1,0,1,1,1,0],     //100 - Code B  / FNC 4   / Code B
+	[1,1,1,0,1,0,1,1,1,1,0],     //101 - FNC 4   / Code A  / Code A
+	[1,1,1,1,0,1,0,1,1,1,0],     //102 - FNC 1   / FNC 1   / FNC 1
+	[1,1,0,1,0,0,0,0,1,0,0],     //103 - Start Code A
+	[1,1,0,1,0,0,1,0,0,0,0],     //104 - Start Code B
+	[1,1,0,1,0,0,1,1,1,0,0],     //105 - Start Code C
+	[1,1,0,0,0,1,1,1,0,1,0,1,1], //106 - Stop Pattern
+	[0,0,0,0,0,0,0,0,0,0],       //107 - Quiet Zone
+];
 
 /*
  * cs128_a - convert ASCII string to vector encode in Code Set 128A
@@ -130,15 +253,15 @@ function cs128_a(string, concatenating=false) =
 	);
 
 /**** cs128_a() unit-tests ****/
-do_assert(cs128_a("ABCD !")                            == [103,33,34,35,36,0,1],
+do_assert(cs128_a("ABCD !")                         == [103,33,34,35,36,0,1],
 	"cs128_a test 00");
-do_assert(cs128_a("ABCD !", true)                      == [33,34,35,36,0,1],
+do_assert(cs128_a("ABCD !", true)                   == [33,34,35,36,0,1],
 	"cs128_a test 01");
-do_assert(cs128_a("Z[\\]^_")                           == [103,58,59,60,61,62,63],
+do_assert(cs128_a("Z[\\]^_")                        == [103,58,59,60,61,62,63],
 	"cs128_a test 02");
-do_assert(cs128_a("\ue000")                            == [103,64],
+do_assert(cs128_a("\ue000")                         == [103,64],
 	"cs128_a test 03");
-do_assert(cs128_a("\x01\x02\x03\x04")                  == [103,65,66,67,68],
+do_assert(cs128_a("\x01\x02\x03\x04")               == [103,65,66,67,68],
 	"cs128_a test 04");
 do_assert(cs128_a(str(FNC1(),FNC2(),FNC3(),FNC4())) == [103,102,97,96,101],
 	"cs128_a test 05");
@@ -213,12 +336,12 @@ do_assert(cs128_c([0,1,2,3])          == [105,1,23],      "cs128_c test 01");
 do_assert(cs128_c([0,1,2,3], true)    == [1,23],          "cs128_c test 02");
 do_assert(cs128_c([0,0,0,1,0,2])      == [105,0,1,2],     "cs128_c test 03");
 do_assert(cs128_c([9,8,6,7,0,0])      == [105,98,67,0],   "cs128_c test 04");
-do_assert(cs128_c([1,3,FNC1(),2,1]) == [105,13,102,21], "cs128_c test 05");
+do_assert(cs128_c([1,3,FNC1(),2,1])   == [105,13,102,21], "cs128_c test 05");
 do_assert(cs128_c([1,3,FNC1(),FNC1(),2,1]) == [105,13,102,102,21],
 	"cs128_c test 06");
-do_assert(cs128_c([1,3,FNC1(),4])   == [105,13,102],    "cs128_c test 07");
-do_assert(cs128_c([7,FNC1(),2,1])   == [105,102,21],    "cs128_c test 08");
-do_assert(cs128_c([7,FNC1(),4])     == [105,102],       "cs128_c test 09");
+do_assert(cs128_c([1,3,FNC1(),4])     == [105,13,102],    "cs128_c test 07");
+do_assert(cs128_c([7,FNC1(),2,1])     == [105,102,21],    "cs128_c test 08");
+do_assert(cs128_c([7,FNC1(),4])       == [105,102],       "cs128_c test 09");
 do_assert(cs128_c([7,FNC1(),FNC1(),4]) == [105,102,102],
 	"cs128_c test 10");
 do_assert(cs128_c([1,3,10,2,2,1])     == [105,13,102,21], "cs128_c test 11");
@@ -327,7 +450,8 @@ function calculate_checkdigit(symbols, i=-1) =
  * code_128 - Generate a Code 128 / GS1-128 barcode
  *
  * codepoints - vector of codepoints to encode
- *   see the other helper functions in this file for API to generate this vector
+ *   see the API at the top of the file for the helper functions to generate
+ *   this vector
  *
  * bar - bar representation
  * space - space representation
@@ -347,6 +471,8 @@ module code_128(codepoints, bar=1, space=0, quiet_zone=0, vector_mode=false,
 	if (!expert_mode)
 		do_assert(!start_check, "Code 128 does not begin with a valide START symbol");
 
+	//normalize the vector by replacing start symbols in the middle of the
+	//vector with switch symbols
 	norm_vec = (expert_mode)?
 		codepoints
 		:
@@ -358,6 +484,7 @@ module code_128(codepoints, bar=1, space=0, quiet_zone=0, vector_mode=false,
 				codepoints[i],
 		];
 
+	//add the checkdigit and wrapping quiet zone and stop symbols
 	c128_vec = (expert_mode)?
 		codepoints
 		:
@@ -368,35 +495,100 @@ module code_128(codepoints, bar=1, space=0, quiet_zone=0, vector_mode=false,
 			STOP(),
 			QUIET()
 		];
-	echo(c128_vec);
+
+	//replace the symbol numbers with the modules from symbol_vector
+	//and concatenates them together
+	//modules are also replaced with the provided bar/space/quiet_zone
+	module_vector = [
+		for (i=c128_vec)
+			for (j=symbol_vector[i])
+				(i==107)?quiet_zone:
+				(j)?bar:space
+	];
+
+	//draw the resulting vector
+	scale([0.495, 12.7, 1])
+		1dbitmap(module_vector, vector_mode=vector_mode);
 }
 
 
-/* examples */
-//B - RI 476 394 652 CH
-code_128(cs128_b("RI 476 394 652 CH"));
-//A - PJJ123C			(checkdigit 54)
-code_128(cs128_a("PJJ123C"));
-//B - Wikipedia			(checkdigit 88)
-code_128(cs128_b("Wikipedia"));
-//B - Wikipedia
-code_128(concat(cs128_b("W"), cs128_b("ikipedia", concatenating=true)));
-//A - W-ikipedia
-code_128(concat(cs128_a("W"), cs128_b("ikipedia")));
-//B - Wiki^Pedia
-code_128(concat(cs128_b("Wiki"), cs128_shift_a("P"), cs128_b("edia", concatenating=true)));
-//C - 4218402050-0		(checkdigit 92)
-code_128(concat(cs128_c([FNC1(), 4,2, 1,8, 4,0, 2,0, 5,0]), cs128_a("0")));
-//B - X00Y
-code_128(cs128_b("X00Y"));
-//B - X-00-Y
-code_128(concat(cs128_b("X"), cs128_c([0,0]), cs128_b("Y")));
-//A - ABC¡!¢£¤¥Þ^ÀÁÂÃXYZ
-code_128(cs128_a(str("ABC", FNC4(), cs128_fnc4_high_helper("¡"), "!",
-	cs128_fnc4_high_helper(str(FNC4(), FNC4(), "¢£¤¥Þ", FNC4())), "^",
-	cs128_fnc4_high_helper("ÀÁÂÃ"), FNC4(), FNC4(), "XYZ")));
-//Invalid Start - remove expert_mode flag to test assert
-code_128([1, 16, 33, 73, 99, 58], expert_mode=true);
-//A - PJJ123C			(expert mode example)
-code_128([QUIET(),START_A(),48,42,42,17,18,19,35,54,STOP(),QUIET()],
-	expert_mode=true);
+/* Examples */
+example=1;
+//example  0 - 128B/C - RI476394652CH - Real world example from Wikipedia
+//example  1 - 128B - Wikipedia - Schematic example from Wikipedia, vector mode example
+//example  2 - 128A - PJJ123C - Checksum calculation example from Wikipedia
+//example  3 - 128C/A - 42184020500 - FNC1 example from Wikipedia
+//example  4 - 128B - Wikipedia - concatenation flag example
+//example  5 - 128A/B - Wikipedia - mixed a/b example
+//example  6 - 128B - WikiPedia - shift example
+//example  7 - 128B - X00Y - length optimization example from Wikipedia
+//example  8 - 128B/C - X00Y - length optimization example from Wikipedia
+//example  9 - 128A - ABC¡!¢£¤¥Þ^ÀÁÂÃXYZ - FNC4 high-ASCII example
+//example 10 - 128A - PJJ123C - expert mode example
+//example 11 - Invalid - test assert for invalid start symbol
+//example 12 - Invalid - expert mode allows generating an invalid barcode
+
+if (example==0)
+	code_128(concat(cs128_b("RI"),
+			cs128_c([4,7,6,3,9,4,6,5,]),
+			cs128_b("2CH")),
+		bar="black");
+
+if (example==1)
+	//checkdigit 88
+	code_128(cs128_b("Wikipedia"), bar="black", vector_mode=true);
+
+if (example==2)
+	//checkdigit 54
+	code_128(cs128_a("PJJ123C"), bar="black");
+
+if (example==3)
+	//checkdigit 92
+	code_128(concat(cs128_c([FNC1(), 4,2, 1,8, 4,0, 2,0, 5,0]), cs128_a("0")),
+		bar="black");
+
+//same as example 1 - uses unnecessary concatenation to show the use of the
+//concatenating flag
+if (example==4)
+	code_128(concat(cs128_b("W"), cs128_b("ikipedia", concatenating=true)),
+		bar="black");
+
+//similar to example 1 - unnecessarily starts with 128A to show the use of
+//mixed code types
+if (example==5)
+	code_128(concat(cs128_a("W"), cs128_b("ikipedia")), bar="black");
+
+if (example==6)
+	code_128(concat(cs128_b("Wiki"),
+			cs128_shift_a("P"),
+			cs128_b("edia", concatenating=true)),
+		bar="black");
+
+if (example==7)
+	code_128(cs128_b("X00Y"), bar="black");
+
+//similar to example 7 - use of 128C here is paradoxically larger
+if (example==8)
+	code_128(concat(cs128_b("X"), cs128_c([0,0]), cs128_b("Y")), bar="black");
+
+
+//high-ASCII example - this is supposedly very non-standard, but 3 out-of-4
+//android apps that I tried were able to decode it as ABC¡!¢£¤¥Þ^ÀÁÂÃXYZ
+if (example==9)
+	code_128(cs128_a(str("ABC", FNC4(), cs128_fnc4_high_helper("¡"), "!",
+		cs128_fnc4_high_helper(str(FNC4(), FNC4(), "¢£¤¥Þ", FNC4())), "^",
+		cs128_fnc4_high_helper("ÀÁÂÃ"), FNC4(), FNC4(), "XYZ")),
+		bar="black");
+
+//same as example 2, uses expert mode to manually specify all code points
+if (example==10)
+	code_128([QUIET(),START_A(),48,42,42,17,18,19,35,54,STOP(),QUIET()],
+		bar="black", expert_mode=true);
+
+//Invalid Start - Should assert
+if (example==11)
+	code_128([1, 16, 33, 73, 99, 58], bar="black");
+
+//same as example 11 - expert mode allows module generation anyway
+if (example==12)
+	code_128([1, 16, 33, 73, 99, 58], bar="black", expert_mode=true);
