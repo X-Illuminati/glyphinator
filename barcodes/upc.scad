@@ -61,6 +61,8 @@ use <../util/stringlib.scad>
  * 10 - quiet zone
  * 11 - start/end marker
  * 12 - middle marker
+ * 13 - EAN-13 left quiet zone
+ * 14 - EAN-13 right quiet zone
  */
 symbol_vector = [
 	[0,0,0,1,1,0,1], // 00 - 0
@@ -76,6 +78,8 @@ symbol_vector = [
 	[0,0,0,0,0,0,0,0,0], // 10 - quiet zone
 	[1,0,1],             // 11 - start/end marker
 	[0,1,0,1,0],         // 12 - middle marker
+	[0,0,0,0,0,0,0,0,0,0,0], // 13 - EAN-13 left quiet zone
+	[0,0,0,0,0,0,0],         // 14 - EAN-13 right quiet zone
 ];
 
 /*
@@ -99,11 +103,13 @@ ean_13_reverse_vector = [
 /*
  * upc_symbol_len - return length of a given symbol
  *
- * symbol - integer 00-22
+ * symbol - integer 00-14
  *   00-09 - numeric digits (odd parity)
  *   10 - quiet zone
  *   11 - start/end symbol
  *   12 - middle symbol
+ *   13 - EAN-13 left quiet zone
+ *   14 - EAN-13 right quiet zone
  */
 function upc_symbol_len(symbol) =
 	len(symbol_vector[symbol]);
@@ -111,11 +117,13 @@ function upc_symbol_len(symbol) =
 /*
  * upc_symbol - render a single symbol
  *
- * symbol - integer 00-22
+ * symbol - integer 00-14
  *   00-09 - numeric digits (odd parity)
  *   10 - quiet zone
  *   11 - start/end symbol
  *   12 - middle symbol
+ *   13 - EAN-13 left quiet zone
+ *   14 - EAN-13 right quiet zone
  * 
  * bar - bar representation
  * space - space representation
@@ -137,6 +145,8 @@ module upc_symbol(symbol, bar=1, space=0, quiet_zone=0,
 		for (i=[0:1:upc_symbol_len(symbol)-1])
 			let (index=reverse?upc_symbol_len(symbol)-i-1:i)
 				(symbol==10)?quiet_zone:
+				(symbol==13)?quiet_zone:
+				(symbol==14)?quiet_zone:
 				(symbol_vector[symbol][index])?B:S
 	];
 
@@ -199,7 +209,8 @@ module UPC_base(digits, mode,
 	//returns the symbol to draw at position i
 	//i ranges from 0 to 16
 	function get_symbol(digits, checkdigit, i) =
-		(i==0)?10:
+		(i==0)?
+			(symbol_length==12)?10:13:
 		(i==1)?11:
 		(i<8)?digits[i-(14-symbol_length)]:
 		(i==8)?12:
@@ -209,15 +220,17 @@ module UPC_base(digits, mode,
 				digits[symbol_length-1]:
 				checkdigit:
 		(i==15)?11:
-		(i==16)?10: undef;
+		(i==16)?
+				(symbol_length==12)?10:14:
+		undef;
 
 	//returns nominal symbol height for the
 	//symbol in position i
 	//i ranges from 0 to 16
 	function get_height(i) =
-		(i<(15-symbol_length))?27.55:
-		(i==8)?27.55:
-		(i>(symbol_length+1))?27.55: 25.9;
+		(i<(15-symbol_length))?24.5:
+		(i==8)?24.5:
+		(i>(symbol_length+1))?24.5: 22.85;
 
 	//returns whether odd or even parity should
 	//be used for the symbol in position i
@@ -264,7 +277,7 @@ module UPC_base(digits, mode,
 		vector_mode=vector_mode,
 		x=0, i=0)
 	{
-		translate([0,27.55-get_height(i),0])
+		translate([0,24.5-get_height(i),0])
 			scale([0.33, get_height(i), 1])
 				translate([x,0,0])
 					upc_symbol(
@@ -310,18 +323,18 @@ module UPC_base(digits, mode,
 	) : (
 	[
 		0.33*(
-			(i==0)?0:
+			(i==0)?upc_symbol_len(13)-upc_symbol_len(14):
 			(i<7)?(
-				upc_symbol_len(10)+upc_symbol_len(11)+
+				upc_symbol_len(13)+upc_symbol_len(11)+
 				upc_symbol_len(0)*(i-1+0.25)
 			):
 			(i<13)?(
-				upc_symbol_len(10)+upc_symbol_len(11)+
+				upc_symbol_len(13)+upc_symbol_len(11)+
 				upc_symbol_len(12)+
 				upc_symbol_len(0)*(i-1+0.25)
 			):
 			(
-				upc_symbol_len(10)+upc_symbol_len(11)+
+				upc_symbol_len(13)+upc_symbol_len(11)+
 				upc_symbol_len(12)+upc_symbol_len(11)+
 				upc_symbol_len(0)*(i-1+0.25)
 			)
@@ -448,7 +461,7 @@ module EAN_13(string, bar=1, space=0, quiet_zone=0,
 //UPC_A("04210000526", bar="black"); //checkdigit 4
 //UPC_A("12345678901", bar="black"); //checkdigit 2
 //UPC_A("01234554321", bar="black"); //checkdigit 0
-UPC_A("012345543210", bar="black", vector_mode=true);
+//UPC_A("012345543210", bar="black", vector_mode=true);
 //UPC_A("012345543210", bar=true);
 //UPC_A("012345543210", bar=3);
 //UPC_A("012345543210", bar=[.5,.8,.9]);
@@ -456,7 +469,7 @@ UPC_A("012345543210", bar="black", vector_mode=true);
 //UPC_A("012345543210", bar=0);
 //UPC_A("012345543210");
 
-//EAN_13("5901234123457>", bar="black");
+EAN_13("5901234123457>", bar="black");
 //EAN_13("871125300120", bar=true); //checkdigit 2
 //EAN_13("8711253001202", bar=false);
 //EAN_13("8711253001202", bar=0);
