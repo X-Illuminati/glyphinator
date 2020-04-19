@@ -49,7 +49,7 @@ Include code128.scad in your model with the use command.
 See the documentation in [code128.scad](barcodes/code128.scad) for more details.
 ```
 use <barcodes/code128.scad>
-code_128(cs128_c([1,2,3,4]), bar="black");
+code_128(cs128_c([1,2,3,4]));
 ```
 
 ![Code 128 Example](doc/code_128-example.png)
