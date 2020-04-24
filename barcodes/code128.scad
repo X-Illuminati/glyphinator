@@ -408,11 +408,12 @@ do_assert(cs128_shift_b(FNC4())   == [98, 100], "cs128_shift_b test 08");
  */
 function cs128_fnc4_high_helper(string) =
 	chr(
-		[ for (i=string)
-			ord(i)>255?ord(i): //pass through anything above 8-bit ASCII
-			ord(i)<128?ord(i): //undefined behavior for low-ASCII characters
-			ord(i)==128?ord(NUL()): //special case - would encode as \0
-			ord(i)-128 //subtract 128 from high-ASCII characters
+		[
+			let (val = search(string, "\u0080\u0081\u0082\u0083\u0084\u0085\u0086\u0087\u0088\u0089\u008A\u008B\u008C\u008D\u008E\u008F\u0090\u0091\u0092\u0093\u0094\u0095\u0096\u0097\u0098\u0099\u009A\u009B\u009C\u009D\u009E\u009F\u00A0¡¢£¤¥¦§¨©ª«¬­®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ\uE000\uE001\uE002\uE003\uE004"))
+			for (i = val)
+				(i==0)?57344:        //special case - would encode as \0
+				(i>127)?57344+i-128: //pass through our custom-use \uE000-\uE004
+				i                    //position in search string is ord-128
 		]
 	);
 
@@ -481,20 +482,20 @@ module code_128(codepoints, bar=1, space=0, quiet_zone=0, vector_mode=false,
 				(i>0 && codepoints[i]==START_A())? CODE_A():
 				(i>0 && codepoints[i]==START_B())? CODE_B():
 				(i>0 && codepoints[i]==START_C())? CODE_C():
-				codepoints[i],
+				codepoints[i]
 		];
 
 	//add the checkdigit and wrapping quiet zone and stop symbols
 	c128_vec = (expert_mode)?
 		codepoints
 		:
-		[
+		concat(
 			QUIET(),
-			for(i=norm_vec) i,
+			[ for(i=norm_vec) i ],
 			calculate_checkdigit(norm_vec),
 			STOP(),
 			QUIET()
-		];
+		);
 
 	//replace the symbol numbers with the modules from symbol_vector
 	//and concatenates them together
