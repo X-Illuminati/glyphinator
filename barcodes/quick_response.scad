@@ -567,8 +567,7 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 						(dir?-s.y+news.y:-news.y+s.y):
 						(dir?-news.y:s.y)
 					);
-			quick_response_inner(bytes, mark=mark,
-				space=space, i=newi, x=newx, y=newy,
+			quick_response_inner(bytes, i=newi, x=newx, y=newy,
 				dir=newdir, _mode=newmode);
 		}
 	}

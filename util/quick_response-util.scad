@@ -19,9 +19,12 @@
  *****************************************************************************
  * Usage:
  * Include this file with the "use" tag.
- * Depends on the bitlib.scad and reed-solomon-quick_response.scad library.
- * When run on its own, all echo statements in this library should print
- * "true".
+ *
+ * Library Dependencies:
+ * - util/compat.scad
+ * - util/bitlib.scad
+ * - util/reed-solomon-quick_response.scad
+ *   - util/bitlib.scad
  *
  * API:
  *   qr_pad(data, ecc_level, data_size=undef)
@@ -68,10 +71,8 @@
  *   qr_prop_data_size(properties, ecc_level) - return number of data cw
  *   qr_prop_dimension(properties) - return symbol dimension (square)
  *
- * TODO:
- *  - Change echos to asserts (future OpenSCAD version)
- *
  *****************************************************************************/
+use <compat.scad>
 use <bitlib.scad>
 use <reed-solomon-quick_response.scad>
 
@@ -150,15 +151,25 @@ function qr_prop_block_lens(properties, ecc_level) =
 function qr_get_props_by_version(version)=
 	qr_prop_table[version-1];
 
-echo("*** qr_get_props_by_version() testcases ***");
-echo(qr_get_props_by_version(-1)==undef);
-echo(qr_get_props_by_version(0)==undef);
-echo(qr_get_props_by_version(1)!=undef);
-echo(qr_get_props_by_version(6)!=undef);
-echo(qr_get_props_by_version(true)==undef);
-echo(qr_get_props_by_version(false)==undef);
-echo(qr_get_props_by_version(undef)==undef);
-echo(qr_get_props_by_version(7)==undef); //will need adjustment in the future
+/* *** qr_get_props_by_version() testcases *** */
+do_assert(qr_get_props_by_version(-1)==undef,
+	"qr_get_props_by_version test 00");
+do_assert(qr_get_props_by_version(0)==undef,
+	"qr_get_props_by_version test 01");
+do_assert(qr_get_props_by_version(1)!=undef,
+	"qr_get_props_by_version test 02");
+do_assert(qr_get_props_by_version(6)!=undef,
+	"qr_get_props_by_version test 03");
+do_assert(qr_get_props_by_version(true)==undef,
+	"qr_get_props_by_version test 04");
+do_assert(qr_get_props_by_version(false)==undef,
+	"qr_get_props_by_version test 05");
+do_assert(qr_get_props_by_version(undef)==undef,
+	"qr_get_props_by_version test 06");
+//this will need adjustment in the future if the table is expanded
+do_assert(qr_get_props_by_version(7)==undef,
+	"qr_get_props_by_version test 07");
+
 
 /*
  * qr_get_props_by_data_size
@@ -170,27 +181,40 @@ echo(qr_get_props_by_version(7)==undef); //will need adjustment in the future
  *   0=Low, 1=Mid, 2=Quality, 3=High
  */
 function qr_get_props_by_data_size(data_size, ecc_level, i=0) =
+	(!isa_num(data_size))?undef:
 	(data_size<0)?undef:
-	(data_size==true)?undef:
-	(data_size==false)?undef:
 	let(p=qr_prop_table[i])
 		(p==undef)?undef:
 		(qr_prop_data_size(p, ecc_level)>=data_size)?p:
 		qr_get_props_by_data_size(data_size, ecc_level, i+1);
 
-echo("*** qr_get_props_by_data_size() testcases ***");
-echo(qr_get_props_by_data_size(-1, 0)==undef);
-echo(qr_get_props_by_data_size(0, 0)!=undef);
-echo(qr_get_props_by_data_size(1, 0)!=undef);
-echo(qr_get_props_by_data_size(136, 0)!=undef);
-echo(qr_get_props_by_data_size(0, -1)==undef);
-echo(qr_get_props_by_data_size(0, 1)!=undef);
-echo(qr_get_props_by_data_size(0, 2)!=undef);
-echo(qr_get_props_by_data_size(0, 3)!=undef);
-echo(qr_get_props_by_data_size(0, 4)==undef);
-echo(qr_get_props_by_data_size(true, 0)==undef);
-echo(qr_get_props_by_data_size(false, 0)==undef);
-echo(qr_get_props_by_data_size(137, 0)==undef); //will need adjustment in the future
+/* *** qr_get_props_by_data_size() testcases *** */
+do_assert(qr_get_props_by_data_size(-1, 0)==undef,
+	"qr_get_props_by_data_size test 00");
+do_assert(qr_get_props_by_data_size(0, 0)!=undef,
+	"qr_get_props_by_data_size test 01");
+do_assert(qr_get_props_by_data_size(1, 0)!=undef,
+	"qr_get_props_by_data_size test 02");
+do_assert(qr_get_props_by_data_size(136, 0)!=undef,
+	"qr_get_props_by_data_size test 03");
+do_assert(qr_get_props_by_data_size(0, -1)==undef,
+	"qr_get_props_by_data_size test 04");
+do_assert(qr_get_props_by_data_size(0, 1)!=undef,
+	"qr_get_props_by_data_size test 05");
+do_assert(qr_get_props_by_data_size(0, 2)!=undef,
+	"qr_get_props_by_data_size test 06");
+do_assert(qr_get_props_by_data_size(0, 3)!=undef,
+	"qr_get_props_by_data_size test 07");
+do_assert(qr_get_props_by_data_size(0, 4)==undef,
+	"qr_get_props_by_data_size test 08");
+do_assert(qr_get_props_by_data_size(true, 0)==undef,
+	"qr_get_props_by_data_size test 09");
+do_assert(qr_get_props_by_data_size(false, 0)==undef,
+	"qr_get_props_by_data_size test 10");
+//this will need adjustment in the future if the table is expanded
+do_assert(qr_get_props_by_data_size(137, 0)==undef,
+	"qr_get_props_by_data_size test 11");
+
 
 /*
  * qr_get_props_by_total_size
@@ -208,143 +232,231 @@ function qr_get_props_by_total_size(total_size, i=0) =
 		(qr_prop_total_size(p)==total_size)?p:
 		qr_get_props_by_total_size(total_size, i+1);
 
-echo("*** qr_get_props_by_total_size() testcases ***");
-echo(qr_get_props_by_total_size(-1)==undef);
-echo(qr_get_props_by_total_size(0)==undef);
-echo(qr_get_props_by_total_size(1)==undef);
-echo(qr_get_props_by_total_size(3)==undef);
-echo(qr_get_props_by_total_size(26)!=undef);
-echo(qr_get_props_by_total_size(29)==undef);
-echo(qr_get_props_by_total_size(44)!=undef);
-echo(qr_get_props_by_total_size(80)==undef);
-echo(qr_get_props_by_total_size(100)!=undef);
-echo(qr_get_props_by_total_size(172)!=undef);
-echo(qr_get_props_by_total_size(true)==undef);
-echo(qr_get_props_by_total_size(false)==undef);
-echo(qr_get_props_by_total_size(173)==undef); //will need adjustment in the future
+/* *** qr_get_props_by_total_size() testcases *** */
+do_assert(qr_get_props_by_total_size(-1)==undef,
+	"qr_get_props_by_total_size test 00");
+do_assert(qr_get_props_by_total_size(0)==undef,
+	"qr_get_props_by_total_size test 01");
+do_assert(qr_get_props_by_total_size(1)==undef,
+	"qr_get_props_by_total_size test 02");
+do_assert(qr_get_props_by_total_size(3)==undef,
+	"qr_get_props_by_total_size test 03");
+do_assert(qr_get_props_by_total_size(26)!=undef,
+	"qr_get_props_by_total_size test 04");
+do_assert(qr_get_props_by_total_size(29)==undef,
+	"qr_get_props_by_total_size test 05");
+do_assert(qr_get_props_by_total_size(44)!=undef,
+	"qr_get_props_by_total_size test 06");
+do_assert(qr_get_props_by_total_size(80)==undef,
+	"qr_get_props_by_total_size test 07");
+do_assert(qr_get_props_by_total_size(100)!=undef,
+	"qr_get_props_by_total_size test 08");
+do_assert(qr_get_props_by_total_size(172)!=undef,
+	"qr_get_props_by_total_size test 09");
+do_assert(qr_get_props_by_total_size(true)==undef,
+	"qr_get_props_by_total_size test 10");
+do_assert(qr_get_props_by_total_size(false)==undef,
+	"qr_get_props_by_total_size test 11");
+//this will need adjustment in the future if the table is expanded
+do_assert(qr_get_props_by_total_size(173)==undef,
+	"qr_get_props_by_total_size test 12");
 
-echo("*** qr_prop_version testcases ***");
-echo(len(qr_prop_table)==6); //reminder to check results below
+
+/* *** qr_prop_version testcases *** */
+do_assert(len(qr_prop_table)==6, "prop table changed, check for loop here");
 for (i=[0:len(qr_prop_table)-1])
-	echo(qr_prop_version(qr_prop_table[i])==(i+1));
+	do_assert(qr_prop_version(qr_prop_table[i])==(i+1),
+		str("qr_prop_version test ", i));
 
-echo("*** qr_prop_blocks testcases ***");
-echo(len(qr_prop_table)==6); //reminder to check results below
+/* *** qr_prop_blocks testcases *** */
+do_assert(len(qr_prop_table)==6, "prop table changed, check for loops here");
 for (i=[0:len(qr_prop_table)-1]) {
 	lev=0;
 	test_table=[1,1,1,1,1,2];
-	echo(qr_prop_blocks(qr_prop_table[i],lev)
-		==test_table[i]);
+	do_assert(qr_prop_blocks(qr_prop_table[i],lev)
+		==test_table[i], str("qr_prop_blocks(low) test ", i));
 }
 for (i=[0:len(qr_prop_table)-1]) {
 	lev=1;
 	test_table=[1,1,1,2,2,4];
-	echo(qr_prop_blocks(qr_prop_table[i],lev)
-		==test_table[i]);
+	do_assert(qr_prop_blocks(qr_prop_table[i],lev)
+		==test_table[i], str("qr_prop_blocks(mid) test ", i));
 }
 for (i=[0:len(qr_prop_table)-1]) {
 	lev=2;
 	test_table=[1,1,2,2,4,4];
-	echo(qr_prop_blocks(qr_prop_table[i],lev)
-		==test_table[i]);
+	do_assert(qr_prop_blocks(qr_prop_table[i],lev)
+		==test_table[i], str("qr_prop_blocks(quality) test ", i));
 }
 for (i=[0:len(qr_prop_table)-1]) {
 	lev=3;
 	test_table=[1,1,2,4,4,4];
-	echo(qr_prop_blocks(qr_prop_table[i],lev)
-		==test_table[i]);
+	do_assert(qr_prop_blocks(qr_prop_table[i],lev)
+		==test_table[i], str("qr_prop_blocks(high) test ", i));
 }
 
-echo("*** qr_prop_block_lens testcases ***");
-echo(len(qr_prop_table)==6); //reminder to add to results
+/* *** qr_prop_block_lens testcases *** */
+do_assert(len(qr_prop_table)==6, "prop table changed, add testcases here");
+
 //we'll just spot check a few of these -
 //mostly the ones that are tricky
-echo(qr_prop_block_lens(qr_prop_table[0],0)
-	==[[7,19]]);
-echo(qr_prop_block_lens(qr_prop_table[5],0)
-	==[[18,68],[18,68]]);
-echo(qr_prop_block_lens(qr_prop_table[0],1)
-	==[[10,16]]);
-echo(qr_prop_block_lens(qr_prop_table[5],1)
-	==[[16,27],[16,27],[16,27],[16,27]]);
-echo(qr_prop_block_lens(qr_prop_table[0],2)
-	==[[13,13]]);
-echo(qr_prop_block_lens(qr_prop_table[2],2)
-	==[[18,17],[18,17]]);
-echo(qr_prop_block_lens(qr_prop_table[4],2)
-	==[[18,15],[18,15],[18,16],[18,16]]);
-echo(qr_prop_block_lens(qr_prop_table[5],2)
-	==[[24,19],[24,19],[24,19],[24,19]]);
-echo(qr_prop_block_lens(qr_prop_table[0],3)
-	==[[17,9]]);
-echo(qr_prop_block_lens(qr_prop_table[2],3)
-	==[[22,13],[22,13]]);
-echo(qr_prop_block_lens(qr_prop_table[3],3)
-	==[[16,9],[16,9],[16,9],[16,9]]);
-echo(qr_prop_block_lens(qr_prop_table[4],3)
-	==[[22,11],[22,11],[22,12],[22,12]]);
-echo(qr_prop_block_lens(qr_prop_table[5],3)
-	==[[28,15],[28,15],[28,15],[28,15]]);
+do_assert(qr_prop_block_lens(qr_prop_table[0],0)
+	==[[7,19]],
+	"qr_prop_block_lens test 00");
+do_assert(qr_prop_block_lens(qr_prop_table[5],0)
+	==[[18,68],[18,68]],
+	"qr_prop_block_lens test 01");
+do_assert(qr_prop_block_lens(qr_prop_table[0],1)
+	==[[10,16]],
+	"qr_prop_block_lens test 02");
+do_assert(qr_prop_block_lens(qr_prop_table[5],1)
+	==[[16,27],[16,27],[16,27],[16,27]],
+	"qr_prop_block_lens test 03");
+do_assert(qr_prop_block_lens(qr_prop_table[0],2)
+	==[[13,13]],
+	"qr_prop_block_lens test 04");
+do_assert(qr_prop_block_lens(qr_prop_table[2],2)
+	==[[18,17],[18,17]],
+	"qr_prop_block_lens test 05");
+do_assert(qr_prop_block_lens(qr_prop_table[4],2)
+	==[[18,15],[18,15],[18,16],[18,16]],
+	"qr_prop_block_lens test 06");
+do_assert(qr_prop_block_lens(qr_prop_table[5],2)
+	==[[24,19],[24,19],[24,19],[24,19]],
+	"qr_prop_block_lens test 07");
+do_assert(qr_prop_block_lens(qr_prop_table[0],3)
+	==[[17,9]],
+	"qr_prop_block_lens test 08");
+do_assert(qr_prop_block_lens(qr_prop_table[2],3)
+	==[[22,13],[22,13]],
+	"qr_prop_block_lens test 09");
+do_assert(qr_prop_block_lens(qr_prop_table[3],3)
+	==[[16,9],[16,9],[16,9],[16,9]],
+	"qr_prop_block_lens test 10");
+do_assert(qr_prop_block_lens(qr_prop_table[4],3)
+	==[[22,11],[22,11],[22,12],[22,12]],
+	"qr_prop_block_lens test 11");
+do_assert(qr_prop_block_lens(qr_prop_table[5],3)
+	==[[28,15],[28,15],[28,15],[28,15]],
+	"qr_prop_block_lens test 12");
 
-echo("*** combination testcases ***");
-echo(qr_prop_data_size(qr_get_props_by_version(1), 3)==9);
-echo(qr_prop_data_size(qr_get_props_by_version(1), 2)==13);
-echo(qr_prop_data_size(qr_get_props_by_version(2), 2)==22);
-echo(qr_prop_data_size(qr_get_props_by_version(6), 1)==108);
-echo(qr_prop_data_size(qr_get_props_by_version(6), 0)==136);
-echo(qr_prop_data_size(qr_get_props_by_version(1), -1)==undef);
-echo(qr_prop_data_size(qr_get_props_by_version(1), 4)==undef);
-echo(qr_prop_data_size(qr_get_props_by_version(1), undef)==undef);
-echo(qr_prop_total_size(qr_get_props_by_version(1))==26);
-echo(qr_prop_total_size(qr_get_props_by_version(3))==70);
-echo(qr_prop_total_size(qr_get_props_by_version(6))==172);
-echo(qr_prop_dimension(qr_get_props_by_version(1))==21);
-echo(qr_prop_dimension(qr_get_props_by_version(4))==33);
-echo(qr_prop_dimension(qr_get_props_by_version(6))==41);
-echo(qr_prop_ecc_size(qr_get_props_by_version(1), 0)==7);
-echo(qr_prop_ecc_size(qr_get_props_by_version(1), 1)==10);
-echo(qr_prop_ecc_size(qr_get_props_by_version(5), 2)==72);
-echo(qr_prop_ecc_size(qr_get_props_by_version(6), 2)==96);
-echo(qr_prop_ecc_size(qr_get_props_by_version(6), 3)==112);
-echo(qr_prop_ecc_size(qr_get_props_by_version(1), -1)==undef);
-echo(qr_prop_ecc_size(qr_get_props_by_version(1), 4)==undef);
-echo(qr_prop_ecc_size(qr_get_props_by_version(1), undef)==undef);
-echo(qr_prop_data_size(qr_get_props_by_data_size(19,0), 0)==19);
-echo(qr_prop_data_size(qr_get_props_by_data_size(44,1), 1)==44);
-echo(qr_prop_data_size(qr_get_props_by_data_size(48,2), 2)==48);
-echo(qr_prop_data_size(qr_get_props_by_data_size(46,3), 3)==46);
-echo(qr_prop_data_size(qr_get_props_by_data_size(60,3), 3)==60);
-echo(qr_prop_total_size(qr_get_props_by_data_size(13,2))==26);
-echo(qr_prop_total_size(qr_get_props_by_data_size(26,3))==70);
-echo(qr_prop_total_size(qr_get_props_by_data_size(136,0))==172);
-echo(qr_prop_dimension(qr_get_props_by_data_size(16,1))==21);
-echo(qr_prop_dimension(qr_get_props_by_data_size(34,0))==25);
-echo(qr_prop_dimension(qr_get_props_by_data_size(76,2))==41);
-echo(qr_prop_ecc_size(qr_get_props_by_data_size(9,3), 3)==17);
-echo(qr_prop_ecc_size(qr_get_props_by_data_size(16,3), 3)==28);
-echo(qr_prop_ecc_size(qr_get_props_by_data_size(34,2), 2)==36);
-echo(qr_prop_ecc_size(qr_get_props_by_data_size(36,3), 3)==64);
-echo(qr_prop_ecc_size(qr_get_props_by_data_size(108,1), 1)==64);
-echo(qr_prop_data_size(qr_get_props_by_total_size(26), 1)==16);
-echo(qr_prop_data_size(qr_get_props_by_total_size(26), 3)==9);
-echo(qr_prop_data_size(qr_get_props_by_total_size(70), 2)==34);
-echo(qr_prop_data_size(qr_get_props_by_total_size(172), 0)==136);
-echo(qr_prop_data_size(qr_get_props_by_total_size(172), 3)==60);
-echo(qr_prop_total_size(qr_get_props_by_total_size(26))==26);
-echo(qr_prop_total_size(qr_get_props_by_total_size(70))==70);
-echo(qr_prop_total_size(qr_get_props_by_total_size(100))==100);
-echo(qr_prop_total_size(qr_get_props_by_total_size(172))==172);
-echo(qr_prop_dimension(qr_get_props_by_total_size(26))==21);
-echo(qr_prop_dimension(qr_get_props_by_total_size(134))==37);
-echo(qr_prop_dimension(qr_get_props_by_total_size(172))==41);
-echo(qr_prop_ecc_size(qr_get_props_by_total_size(26), 0)==7);
-echo(qr_prop_ecc_size(qr_get_props_by_total_size(26), 2)==13);
-echo(qr_prop_ecc_size(qr_get_props_by_total_size(44), 2)==22);
-echo(qr_prop_ecc_size(qr_get_props_by_total_size(172), 1)==64);
-echo(qr_prop_ecc_size(qr_get_props_by_total_size(172), 3)==112);
-echo(qr_prop_version(qr_get_props_by_total_size(26))==1);
-echo(qr_prop_version(qr_get_props_by_total_size(100))==4);
-echo(qr_prop_version(qr_get_props_by_total_size(172))==6);
+/* *** combination testcases *** */
+do_assert(qr_prop_data_size(qr_get_props_by_version(1), 3)==9,
+	"property getter combination test 00");
+do_assert(qr_prop_data_size(qr_get_props_by_version(1), 2)==13,
+	"property getter combination test 01");
+do_assert(qr_prop_data_size(qr_get_props_by_version(2), 2)==22,
+	"property getter combination test 02");
+do_assert(qr_prop_data_size(qr_get_props_by_version(6), 1)==108,
+	"property getter combination test 03");
+do_assert(qr_prop_data_size(qr_get_props_by_version(6), 0)==136,
+	"property getter combination test 04");
+do_assert(qr_prop_data_size(qr_get_props_by_version(1), -1)==undef,
+	"property getter combination test 05");
+do_assert(qr_prop_data_size(qr_get_props_by_version(1), 4)==undef,
+	"property getter combination test 06");
+do_assert(qr_prop_data_size(qr_get_props_by_version(1), undef)==undef,
+	"property getter combination test 07");
+do_assert(qr_prop_total_size(qr_get_props_by_version(1))==26,
+	"property getter combination test 08");
+do_assert(qr_prop_total_size(qr_get_props_by_version(3))==70,
+	"property getter combination test 09");
+do_assert(qr_prop_total_size(qr_get_props_by_version(6))==172,
+	"property getter combination test 10");
+do_assert(qr_prop_dimension(qr_get_props_by_version(1))==21,
+	"property getter combination test 11");
+do_assert(qr_prop_dimension(qr_get_props_by_version(4))==33,
+	"property getter combination test 12");
+do_assert(qr_prop_dimension(qr_get_props_by_version(6))==41,
+	"property getter combination test 13");
+do_assert(qr_prop_ecc_size(qr_get_props_by_version(1), 0)==7,
+	"property getter combination test 14");
+do_assert(qr_prop_ecc_size(qr_get_props_by_version(1), 1)==10,
+	"property getter combination test 15");
+do_assert(qr_prop_ecc_size(qr_get_props_by_version(5), 2)==72,
+	"property getter combination test 16");
+do_assert(qr_prop_ecc_size(qr_get_props_by_version(6), 2)==96,
+	"property getter combination test 17");
+do_assert(qr_prop_ecc_size(qr_get_props_by_version(6), 3)==112,
+	"property getter combination test 18");
+do_assert(qr_prop_ecc_size(qr_get_props_by_version(1), -1)==undef,
+	"property getter combination test 19");
+do_assert(qr_prop_ecc_size(qr_get_props_by_version(1), 4)==undef,
+	"property getter combination test 20");
+do_assert(qr_prop_ecc_size(qr_get_props_by_version(1), undef)==undef,
+	"property getter combination test 21");
+do_assert(qr_prop_data_size(qr_get_props_by_data_size(19,0), 0)==19,
+	"property getter combination test 22");
+do_assert(qr_prop_data_size(qr_get_props_by_data_size(44,1), 1)==44,
+	"property getter combination test 23");
+do_assert(qr_prop_data_size(qr_get_props_by_data_size(48,2), 2)==48,
+	"property getter combination test 24");
+do_assert(qr_prop_data_size(qr_get_props_by_data_size(46,3), 3)==46,
+	"property getter combination test 25");
+do_assert(qr_prop_data_size(qr_get_props_by_data_size(60,3), 3)==60,
+	"property getter combination test 26");
+do_assert(qr_prop_total_size(qr_get_props_by_data_size(13,2))==26,
+	"property getter combination test 27");
+do_assert(qr_prop_total_size(qr_get_props_by_data_size(26,3))==70,
+	"property getter combination test 28");
+do_assert(qr_prop_total_size(qr_get_props_by_data_size(136,0))==172,
+	"property getter combination test 29");
+do_assert(qr_prop_dimension(qr_get_props_by_data_size(16,1))==21,
+	"property getter combination test 30");
+do_assert(qr_prop_dimension(qr_get_props_by_data_size(34,0))==25,
+	"property getter combination test 31");
+do_assert(qr_prop_dimension(qr_get_props_by_data_size(76,2))==41,
+	"property getter combination test 32");
+do_assert(qr_prop_ecc_size(qr_get_props_by_data_size(9,3), 3)==17,
+	"property getter combination test 33");
+do_assert(qr_prop_ecc_size(qr_get_props_by_data_size(16,3), 3)==28,
+	"property getter combination test 34");
+do_assert(qr_prop_ecc_size(qr_get_props_by_data_size(34,2), 2)==36,
+	"property getter combination test 35");
+do_assert(qr_prop_ecc_size(qr_get_props_by_data_size(36,3), 3)==64,
+	"property getter combination test 36");
+do_assert(qr_prop_ecc_size(qr_get_props_by_data_size(108,1), 1)==64,
+	"property getter combination test 37");
+do_assert(qr_prop_data_size(qr_get_props_by_total_size(26), 1)==16,
+	"property getter combination test 38");
+do_assert(qr_prop_data_size(qr_get_props_by_total_size(26), 3)==9,
+	"property getter combination test 39");
+do_assert(qr_prop_data_size(qr_get_props_by_total_size(70), 2)==34,
+	"property getter combination test 40");
+do_assert(qr_prop_data_size(qr_get_props_by_total_size(172), 0)==136,
+	"property getter combination test 41");
+do_assert(qr_prop_data_size(qr_get_props_by_total_size(172), 3)==60,
+	"property getter combination test 42");
+do_assert(qr_prop_total_size(qr_get_props_by_total_size(26))==26,
+	"property getter combination test 43");
+do_assert(qr_prop_total_size(qr_get_props_by_total_size(70))==70,
+	"property getter combination test 44");
+do_assert(qr_prop_total_size(qr_get_props_by_total_size(100))==100,
+	"property getter combination test 45");
+do_assert(qr_prop_total_size(qr_get_props_by_total_size(172))==172,
+	"property getter combination test 46");
+do_assert(qr_prop_dimension(qr_get_props_by_total_size(26))==21,
+	"property getter combination test 47");
+do_assert(qr_prop_dimension(qr_get_props_by_total_size(134))==37,
+	"property getter combination test 48");
+do_assert(qr_prop_dimension(qr_get_props_by_total_size(172))==41,
+	"property getter combination test 49");
+do_assert(qr_prop_ecc_size(qr_get_props_by_total_size(26), 0)==7,
+	"property getter combination test 50");
+do_assert(qr_prop_ecc_size(qr_get_props_by_total_size(26), 2)==13,
+	"property getter combination test 51");
+do_assert(qr_prop_ecc_size(qr_get_props_by_total_size(44), 2)==22,
+	"property getter combination test 52");
+do_assert(qr_prop_ecc_size(qr_get_props_by_total_size(172), 1)==64,
+	"property getter combination test 53");
+do_assert(qr_prop_ecc_size(qr_get_props_by_total_size(172), 3)==112,
+	"property getter combination test 54");
+do_assert(qr_prop_version(qr_get_props_by_total_size(26))==1,
+	"property getter combination test 55");
+do_assert(qr_prop_version(qr_get_props_by_total_size(100))==4,
+	"property getter combination test 56");
+do_assert(qr_prop_version(qr_get_props_by_total_size(172))==6,
+	"property getter combination test 57");
 
 /*
  * qr_bitfield
@@ -362,14 +474,14 @@ function qr_bitfield(value, bitlen) = [bitlen,value];
 //helper to retrieve the length from a bitfield
 function qr_bitfield_len(x) =
 	(x==undef)?undef:
-	(len(x)==undef)?8: //assume byte
+	(!isa_list(x))?8: //assume byte
 	(len(x)==2)?x[0]:
 	undef;
 
 //helper to retrieve the value from a bitfield
 function qr_bitfield_val(x) =
 	(x==undef)?undef:
-	(len(x)==undef)?x:
+	(!isa_list(x))?x:
 	(len(x)==2)?x[1]:
 	undef;
 
@@ -379,19 +491,33 @@ function qr_split_bits(x) =
 	let (l = qr_bitfield_len(x), v = qr_bitfield_val(x))
 		[for (i=[l-1:-1:0]) [1, bit(v,i)?1:0]];
 
-echo("*** qr_split_bits() testcases ***");
-echo(qr_split_bits(0)==[[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0]]);
-echo(qr_split_bits(1)==[[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,1]]);
-echo(qr_split_bits(128)==[[1,1],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0]]);
-echo(qr_split_bits(146)==[[1,1],[1,0],[1,0],[1,1],[1,0],[1,0],[1,1],[1,0]]);
-echo(qr_split_bits(qr_bitfield(1,8))==
-	[[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,1]]);
-echo(qr_split_bits(qr_bitfield(128,8))==
-	[[1,1],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0]]);
-echo(qr_split_bits(qr_bitfield(3,4))==[[1,0],[1,0],[1,1],[1,1]]);
-echo(qr_split_bits(qr_bitfield(8,4))==[[1,1],[1,0],[1,0],[1,0]]);
-echo(qr_split_bits(qr_bitfield(0,2))==[[1,0],[1,0]]);
-echo(qr_split_bits(qr_bitfield(3,2))==[[1,1],[1,1]]);
+/* *** qr_split_bits() testcases *** */
+do_assert(qr_split_bits(0)==
+	[[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0]],
+	"qr_split_bits test 00");
+do_assert(qr_split_bits(1)==
+	[[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,1]],
+	"qr_split_bits test 01");
+do_assert(qr_split_bits(128)==
+	[[1,1],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0]],
+	"qr_split_bits test 02");
+do_assert(qr_split_bits(146)==
+	[[1,1],[1,0],[1,0],[1,1],[1,0],[1,0],[1,1],[1,0]],
+	"qr_split_bits test 03");
+do_assert(qr_split_bits(qr_bitfield(1,8))==
+	[[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,1]],
+	"qr_split_bits test 04");
+do_assert(qr_split_bits(qr_bitfield(128,8))==
+	[[1,1],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0]],
+	"qr_split_bits test 05");
+do_assert(qr_split_bits(qr_bitfield(3,4))==[[1,0],[1,0],[1,1],[1,1]],
+	"qr_split_bits test 06");
+do_assert(qr_split_bits(qr_bitfield(8,4))==[[1,1],[1,0],[1,0],[1,0]],
+	"qr_split_bits test 07");
+do_assert(qr_split_bits(qr_bitfield(0,2))==[[1,0],[1,0]],
+	"qr_split_bits test 08");
+do_assert(qr_split_bits(qr_bitfield(3,2))==[[1,1],[1,1]],
+	"qr_split_bits test 09");
 
 //recursively combine several words into a bigger word
 function qr_combine_words(vec, i=0) =
@@ -407,19 +533,31 @@ function qr_combine_words(vec, i=0) =
 				pow(2,qr_bitfield_len(x))+qr_bitfield_val(x)
 		];
 
-echo("*** qr_combine_words() testcases ***");
-echo(qr_combine_words([[3,5]])==[3,5]);
-echo(qr_combine_words([[3,3],[2,3]])==[5,15]);
-echo(qr_combine_words([[3,3],[0,0],[2,3]])==[5,15]);
-echo(qr_combine_words([[3,3],[2,3],undef])==[5,15]);
-echo(qr_combine_words(qr_split_bits(0))==qr_bitfield(0,8));
-echo(qr_combine_words(qr_split_bits(1))==qr_bitfield(1,8));
-echo(qr_combine_words(qr_split_bits(128))==qr_bitfield(128,8));
-echo(qr_combine_words(qr_split_bits(146))==qr_bitfield(146,8));
-echo(qr_combine_words(qr_split_bits(qr_bitfield(3,4)))==qr_bitfield(3,4));
-echo(qr_combine_words(qr_split_bits(qr_bitfield(8,4)))==qr_bitfield(8,4));
-echo(qr_combine_words(qr_split_bits(qr_bitfield(0,2)))==qr_bitfield(0,2));
-echo(qr_combine_words(qr_split_bits(qr_bitfield(3,2)))==qr_bitfield(3,2));
+/* *** qr_combine_words() testcases *** */
+do_assert(qr_combine_words([[3,5]])==[3,5],
+	"qr_combine_words test 00");
+do_assert(qr_combine_words([[3,3],[2,3]])==[5,15],
+	"qr_combine_words test 01");
+do_assert(qr_combine_words([[3,3],[0,0],[2,3]])==[5,15],
+	"qr_combine_words test 02");
+do_assert(qr_combine_words([[3,3],[2,3],undef])==[5,15],
+	"qr_combine_words test 03");
+do_assert(qr_combine_words(qr_split_bits(0))==qr_bitfield(0,8),
+	"qr_combine_words test 04");
+do_assert(qr_combine_words(qr_split_bits(1))==qr_bitfield(1,8),
+	"qr_combine_words test 05");
+do_assert(qr_combine_words(qr_split_bits(128))==qr_bitfield(128,8),
+	"qr_combine_words test 06");
+do_assert(qr_combine_words(qr_split_bits(146))==qr_bitfield(146,8),
+	"qr_combine_words test 07");
+do_assert(qr_combine_words(qr_split_bits(qr_bitfield(3,4)))==qr_bitfield(3,4),
+	"qr_combine_words test 08");
+do_assert(qr_combine_words(qr_split_bits(qr_bitfield(8,4)))==qr_bitfield(8,4),
+	"qr_combine_words test 09");
+do_assert(qr_combine_words(qr_split_bits(qr_bitfield(0,2)))==qr_bitfield(0,2),
+	"qr_combine_words test 10");
+do_assert(qr_combine_words(qr_split_bits(qr_bitfield(3,2)))==qr_bitfield(3,2),
+	"qr_combine_words test 11");
 
 /*
  * qr_compact_data
@@ -447,32 +585,51 @@ function qr_compact_data(data) =
 					bitfield
 	];
 
-echo("*** qr_compact_data() testcases ***");
-echo(qr_compact_data([0])==[0]); //0x00
-echo(qr_compact_data([qr_bitfield(8,4)])==[qr_bitfield(8,4)]); //0x8.
-echo(qr_compact_data([qr_bitfield(8,4), qr_bitfield(1,4)])==[129]); //0x81
-echo(qr_compact_data([qr_bitfield(3,2), 128, qr_bitfield(1,1)]) //0xE02.
-	==[224,qr_bitfield(1,3)]);
-echo(qr_compact_data([qr_bitfield(0,4), 70, 4, 51, qr_bitfield(3,4)]) //0x04604333
-	==[4,96,67,51]);
-echo(qr_compact_data([70, 4, 51, qr_bitfield(3,4)]) //0x4604333.
-	==[70, 4, 51, qr_bitfield(3,4)]);
-echo( //0x0462F04.
+/* *** qr_compact_data() testcases *** */
+do_assert(qr_compact_data([0])==[0], //0x00
+	"qr_compact_data test 00");
+do_assert(qr_compact_data([qr_bitfield(8,4)])==[qr_bitfield(8,4)], //0x8.
+	"qr_compact_data test 01");
+do_assert(qr_compact_data([qr_bitfield(8,4), qr_bitfield(1,4)])==[129], //0x81
+	"qr_compact_data test 02");
+do_assert(qr_compact_data([qr_bitfield(3,2), 128, qr_bitfield(1,1)]) //0xE02.
+	==[224,qr_bitfield(1,3)],
+	"qr_compact_data test 03");
+do_assert( //0x04604333
+	qr_compact_data([qr_bitfield(0,4), 70, 4, 51, qr_bitfield(3,4)])
+	==[4,96,67,51],
+	"qr_compact_data test 04");
+do_assert(qr_compact_data([70, 4, 51, qr_bitfield(3,4)]) //0x4604333.
+	==[70, 4, 51, qr_bitfield(3,4)],
+	"qr_compact_data test 05");
+do_assert( //0x0462F04.
 	qr_compact_data(
 		[qr_bitfield(0,4), 70, qr_bitfield(2,4), qr_bitfield(15,4), 4])
-	==[4,98,240,qr_bitfield(4,4)]);
-echo( //0x00046233F04.
+	==[4,98,240,qr_bitfield(4,4)],
+	"qr_compact_data test 06");
+do_assert( //0x00046233F04.
 	qr_compact_data(
 		[0, qr_bitfield(0,4), 70, qr_bitfield(2,4), 51, qr_bitfield(15,4), 4])
-	==[0,4,98,51,240,qr_bitfield(4,4)]);
-echo( //0x0004623F0433
-	qr_compact_data(
-		[0, qr_bitfield(0,4), 70, qr_bitfield(2,4), qr_bitfield(3,4), qr_bitfield(15,4), 4, 51])
-	==[0,4,98,63,4,51]);
-echo( //0x146330C204172F
+	==[0,4,98,51,240,qr_bitfield(4,4)],
+	"qr_compact_data test 07");
+do_assert( //0x0004623F0433
+	qr_compact_data([
+		0,
+		qr_bitfield(0,4),
+		70,
+		qr_bitfield(2,4),
+		qr_bitfield(3,4),
+		qr_bitfield(15,4),
+		4,
+		51
+	])
+	==[0,4,98,63,4,51],
+	"qr_compact_data test 08");
+do_assert( //0x146330C204172F
 	qr_compact_data(
 		[qr_bitfield(1,4), 70, 51, 12, qr_bitfield(2,4), 4, 23, 47])
-	==[20,99,48,194,4,23,47]);
+	==[20,99,48,194,4,23,47],
+	"qr_compact_data test 09");
 
 EOM=qr_bitfield(0,4);
 
@@ -533,56 +690,94 @@ function qr_pad(data, ecc_level, data_size=undef) =
 				((i-s)%2==0)?236:17
 		];
 
-echo("*** qr_pad() testcases ***");
-echo(qr_pad([1,2,3,4,5],data_size=4)==undef);
-echo(qr_pad([1,2,3,4,5],0,data_size=4)==undef);
-echo(qr_pad([0,qr_bitfield(1,4),2,qr_bitfield(3,4),4,qr_bitfield(5,4)],data_size=4)
-	==undef);
-echo(qr_pad([0])==undef);
-echo(qr_pad([0],0,4)==[0,0,236,17]);
-echo(qr_pad([for (i=[0:137]) i],0)==undef);
+/* *** qr_pad() testcases *** */
+do_assert(qr_pad([1,2,3,4,5],data_size=4)==undef,
+	"qr_pad test 00");
+do_assert(qr_pad([1,2,3,4,5],0,data_size=4)==undef,
+	"qr_pad test 01");
+do_assert(qr_pad([0,qr_bitfield(1,4),2,qr_bitfield(3,4),4,qr_bitfield(5,4)],
+	data_size=4)
+	==undef,
+	"qr_pad test 02");
+do_assert(qr_pad([0])==undef,
+	"qr_pad test 03");
+do_assert(qr_pad([0],0,4)==[0,0,236,17],
+	"qr_pad test 04");
+do_assert(qr_pad([for (i=[0:137]) i],0)==undef,
+	"qr_pad test 05");
 
-echo(qr_pad([],data_size=10)==[0,236,17,236,17,236,17,236,17,236]);
-echo(qr_pad([1],data_size=10)==[1,0,236,17,236,17,236,17,236,17]);
-echo(qr_pad([1,2],data_size=10)==[1,2,0,236,17,236,17,236,17,236]);
-echo(qr_pad([1,2,3],data_size=10)==[1,2,3,0,236,17,236,17,236,17]);
-echo(qr_pad([1,2,3,4],data_size=10)==[1,2,3,4,0,236,17,236,17,236]);
-echo(qr_pad([1,2,3,4,5,6,7,8],data_size=10)==[1,2,3,4,5,6,7,8,0,236]);
-echo(qr_pad([1,2,3,4,5,6,7,8,9],data_size=10)==[1,2,3,4,5,6,7,8,9,0]);
-echo(qr_pad([1,2,3,4,5,6,7,8,9,10],data_size=10)==[1,2,3,4,5,6,7,8,9,10]);
+do_assert(qr_pad([],data_size=10)==[0,236,17,236,17,236,17,236,17,236],
+	"qr_pad test 06");
+do_assert(qr_pad([1],data_size=10)==[1,0,236,17,236,17,236,17,236,17],
+	"qr_pad test 07");
+do_assert(qr_pad([1,2],data_size=10)==[1,2,0,236,17,236,17,236,17,236],
+	"qr_pad test 08");
+do_assert(qr_pad([1,2,3],data_size=10)==[1,2,3,0,236,17,236,17,236,17],
+	"qr_pad test 09");
+do_assert(qr_pad([1,2,3,4],data_size=10)==[1,2,3,4,0,236,17,236,17,236],
+	"qr_pad test 10");
+do_assert(qr_pad([1,2,3,4,5,6,7,8],data_size=10)==[1,2,3,4,5,6,7,8,0,236],
+	"qr_pad test 11");
+do_assert(qr_pad([1,2,3,4,5,6,7,8,9],data_size=10)==[1,2,3,4,5,6,7,8,9,0],
+	"qr_pad test 12");
+do_assert(qr_pad([1,2,3,4,5,6,7,8,9,10],data_size=10)==[1,2,3,4,5,6,7,8,9,10],
+	"qr_pad test 13");
 
-echo(qr_pad([qr_bitfield(0,4),1,2,3,qr_bitfield(4,4)],data_size=4)==[0,16,32,52]);
-echo(qr_pad([qr_bitfield(0,4),1,2,3,qr_bitfield(4,4)],data_size=5)
-	==[0,16,32,52,0]);
-echo(qr_pad([qr_bitfield(0,4),1,2,3,qr_bitfield(4,4)],data_size=6)
-	==[0,16,32,52,0,236]);
-echo(qr_pad([qr_bitfield(0,4),1,2,3,qr_bitfield(4,4)],data_size=7)
-	==[0,16,32,52,0,236,17]);
-echo(qr_pad([qr_bitfield(0,4),1,2,3,qr_bitfield(4,4)],data_size=8)
-	==[0,16,32,52,0,236,17,236]);
-echo(qr_pad([qr_bitfield(1,4),2,qr_bitfield(3,4),4,qr_bitfield(5,4)],data_size=4)
-	==[16,35,4,80]);
-echo(qr_pad([qr_bitfield(1,4),2,qr_bitfield(3,4),4,qr_bitfield(5,4)],data_size=5)
-	==[16,35,4,80,236]);
-echo(qr_pad([qr_bitfield(1,4),2,qr_bitfield(3,4),4,qr_bitfield(5,4)],data_size=6)
-	==[16,35,4,80,236,17]);
-echo(qr_pad([qr_bitfield(1,4),2,qr_bitfield(3,4),4,qr_bitfield(5,4)],data_size=7)
-	==[16,35,4,80,236,17,236]);
+do_assert(qr_pad([qr_bitfield(0,4),1,2,3,qr_bitfield(4,4)],data_size=4)
+	==[0,16,32,52],
+	"qr_pad test 14");
+do_assert(qr_pad([qr_bitfield(0,4),1,2,3,qr_bitfield(4,4)],data_size=5)
+	==[0,16,32,52,0],
+	"qr_pad test 15");
+do_assert(qr_pad([qr_bitfield(0,4),1,2,3,qr_bitfield(4,4)],data_size=6)
+	==[0,16,32,52,0,236],
+	"qr_pad test 16");
+do_assert(qr_pad([qr_bitfield(0,4),1,2,3,qr_bitfield(4,4)],data_size=7)
+	==[0,16,32,52,0,236,17],
+	"qr_pad test 17");
+do_assert(qr_pad([qr_bitfield(0,4),1,2,3,qr_bitfield(4,4)],data_size=8)
+	==[0,16,32,52,0,236,17,236],
+	"qr_pad test 18");
+do_assert(qr_pad([qr_bitfield(1,4),2,qr_bitfield(3,4),4,qr_bitfield(5,4)],
+	data_size=4)
+	==[16,35,4,80],
+	"qr_pad test 19");
+do_assert(qr_pad([qr_bitfield(1,4),2,qr_bitfield(3,4),4,qr_bitfield(5,4)],
+	data_size=5)
+	==[16,35,4,80,236],
+	"qr_pad test 20");
+do_assert(qr_pad([qr_bitfield(1,4),2,qr_bitfield(3,4),4,qr_bitfield(5,4)],
+	data_size=6)
+	==[16,35,4,80,236,17],
+	"qr_pad test 21");
+do_assert(qr_pad([qr_bitfield(1,4),2,qr_bitfield(3,4),4,qr_bitfield(5,4)],
+	data_size=7)
+	==[16,35,4,80,236,17,236],
+	"qr_pad test 22");
 
-echo(qr_pad([1,2,3,4,5,6,7,8,9], 3)==[1,2,3,4,5,6,7,8,9]);
-echo(qr_pad([1,2,3,4,5,6,7,8,9,10], 3)
-	==[1,2,3,4,5,6,7,8,9,10,0,236,17,236,17,236]);
-echo(qr_pad([1,2,3,4,5,6,7,8,9,10,11,12,13], 2)
-	==[1,2,3,4,5,6,7,8,9,10,11,12,13]);
-echo(qr_pad([1,2,3,4,5,6,7,8,9,10,11,12,13,14], 2)
-	==[1,2,3,4,5,6,7,8,9,10,11,12,13,14,0,236,17,236,17,236,17,236]);
-echo(qr_pad([qr_bitfield(1,4),1,2,3,4,5,6,7,8], 3)
-	==[16,16,32,48,64,80,96,112,128]);
-echo(qr_pad([qr_bitfield(1,4),1,2,3,4,5,6,7,8,9], 3)
-	==[16,16,32,48,64,80,96,112,128,144,236,17,236,17,236,17]);
-echo(qr_pad([qr_bitfield(1,4),1,2,3,4,5,6,7,8,9,10,11,12], 2)
-	==[16,16,32,48,64,80,96,112,128,144,160,176,192]);
-echo(qr_pad([qr_bitfield(1,4),1,2,3,4,5,6,7,8,9,10,11,12,13], 2)==[16,16,32,48,64,80,96,112,128,144,160,176,192,208,236,17,236,17,236,17,236,17]);
+do_assert(qr_pad([1,2,3,4,5,6,7,8,9], 3)==[1,2,3,4,5,6,7,8,9],
+	"qr_pad test 23");
+do_assert(qr_pad([1,2,3,4,5,6,7,8,9,10], 3)
+	==[1,2,3,4,5,6,7,8,9,10,0,236,17,236,17,236],
+	"qr_pad test 24");
+do_assert(qr_pad([1,2,3,4,5,6,7,8,9,10,11,12,13], 2)
+	==[1,2,3,4,5,6,7,8,9,10,11,12,13],
+	"qr_pad test 25");
+do_assert(qr_pad([1,2,3,4,5,6,7,8,9,10,11,12,13,14], 2)
+	==[1,2,3,4,5,6,7,8,9,10,11,12,13,14,0,236,17,236,17,236,17,236],
+	"qr_pad test 26");
+do_assert(qr_pad([qr_bitfield(1,4),1,2,3,4,5,6,7,8], 3)
+	==[16,16,32,48,64,80,96,112,128],
+	"qr_pad test 27");
+do_assert(qr_pad([qr_bitfield(1,4),1,2,3,4,5,6,7,8,9], 3)
+	==[16,16,32,48,64,80,96,112,128,144,236,17,236,17,236,17],
+	"qr_pad test 28");
+do_assert(qr_pad([qr_bitfield(1,4),1,2,3,4,5,6,7,8,9,10,11,12], 2)
+	==[16,16,32,48,64,80,96,112,128,144,160,176,192],
+	"qr_pad test 29");
+do_assert(qr_pad([qr_bitfield(1,4),1,2,3,4,5,6,7,8,9,10,11,12,13], 2)
+	==[16,16,32,48,64,80,96,112,128,144,160,176,192,208,236,17,236,17,236,17,236,17],
+	"qr_pad test 30");
 
 //complex testcase - mix of alphanum and numeric mode with odd lengths
 qr_pad_test_in1 = [
@@ -600,8 +795,10 @@ qr_pad_test_in1 = [
 	qr_bitfield(4,4)
 ];
 qr_pad_test_out1 = [32,95,18,159,43,63,221,106,89,132,4,197,208];
-echo(qr_pad(qr_pad_test_in1, data_size=13) == qr_pad_test_out1);
-echo(qr_pad(qr_pad_test_in1, ecc_level=2) == qr_pad_test_out1);
+do_assert(qr_pad(qr_pad_test_in1, data_size=13) == qr_pad_test_out1,
+	"qr_pad test 31");
+do_assert(qr_pad(qr_pad_test_in1, ecc_level=2) == qr_pad_test_out1,
+	"qr_pad test 32");
 //more complex - overflow by 1 bit
 qr_pad_test_in2 = [
 	qr_bitfield(2,4),
@@ -618,9 +815,11 @@ qr_pad_test_in2 = [
 	qr_bitfield(45,7)
 ];
 qr_pad_test_out2 = [32,95,18,159,43,63,221,106,89,132,5,197,214,128];
-echo(qr_pad(qr_pad_test_in2, data_size=14) == qr_pad_test_out2);
-echo(qr_pad(qr_pad_test_in2, ecc_level=2)
-	== concat(qr_pad_test_out2, [236,17,236,17,236,17,236,17]));
+do_assert(qr_pad(qr_pad_test_in2, data_size=14) == qr_pad_test_out2,
+	"qr_pad test 33");
+do_assert(qr_pad(qr_pad_test_in2, ecc_level=2)
+	== concat(qr_pad_test_out2, [236,17,236,17,236,17,236,17]),
+	"qr_pad test 34");
 
 // helper function to slice the data byte vector into
 // individual blocks for ECC
@@ -671,14 +870,20 @@ function qr_ecc(data, version, ecc_level=2) =
 		)
 			concat(qr_interleave(data_slices),qr_interleave(ecc_blocks));
 
-echo("*** qr_ecc() testcases ***");
-echo(qr_ecc()==undef);
-echo(qr_ecc([10,20])==undef);
-echo(qr_ecc([10,20], version=1, ecc_level=4)==undef);
-echo(qr_ecc([10,20], version=1)==undef);
-echo(qr_ecc([64,69,102,87,35,16,236,17,236], version=1, ecc_level=3)
-	==[64,69,102,87,35,16,236,17,236,150,106,201,175,226,23,128,154,76,96,209,69,45,171,227,182,8]);
+/* *** qr_ecc() testcases *** */
+do_assert(qr_ecc()==undef,
+	"qr_ecc test 00");
+do_assert(qr_ecc([10,20])==undef,
+	"qr_ecc test 01");
+do_assert(qr_ecc([10,20], version=1, ecc_level=4)==undef,
+	"qr_ecc test 02");
+do_assert(qr_ecc([10,20], version=1)==undef,
+	"qr_ecc test 03");
+do_assert(qr_ecc([64,69,102,87,35,16,236,17,236], version=1, ecc_level=3)
+	==[64,69,102,87,35,16,236,17,236,150,106,201,175,226,23,128,154,76,96,209,69,45,171,227,182,8],
+	"qr_ecc test 04");
 //2-block interleave testcase
-echo(qr_ecc([65,21,102,87,39,54,150,246,226,3,50,5,21,34,4,54,246,70,80,236,17,236,17,236,17,236],
+do_assert(qr_ecc([65,21,102,87,39,54,150,246,226,3,50,5,21,34,4,54,246,70,80,236,17,236,17,236,17,236],
 	version=3,ecc_level=3)
-	==[65,34,21,4,102,54,87,246,39,70,54,80,150,236,246,17,226,236,3,17,50,236,5,17,21,236,197,162,86,45,14,104,81,211,172,236,97,22,172,65,1,220,122,146,174,143,180,31,12,109,188,79,220,41,29,236,46,44,158,56,103,126,44,2,4,130,228,52,113,137]);
+	==[65,34,21,4,102,54,87,246,39,70,54,80,150,236,246,17,226,236,3,17,50,236,5,17,21,236,197,162,86,45,14,104,81,211,172,236,97,22,172,65,1,220,122,146,174,143,180,31,12,109,188,79,220,41,29,236,46,44,158,56,103,126,44,2,4,130,228,52,113,137],
+	"qr_ecc test 05");

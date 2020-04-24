@@ -27,6 +27,9 @@
  *     Trigger a compile failure if condition evaluates to false.
  *     The optional message will be printed if provided.
  *
+ *   isa_num(arg)
+ *     Tests the argument and returns true if it is a number.
+ *
  *   isa_string(arg)
  *     Tests the argument and returns true if it is a string.
  *
@@ -125,6 +128,34 @@ echo("*** NOTE: uncomment do_assert() failure checks here to test ***");
 //test_do_assert_mod([], "test message");
 //test_do_assert_mod(undef);
 //test_do_assert_mod(undef, "test message");
+
+
+/*
+ * isa_num - determines whether the argument is a number
+ *
+ * arg - the argument to check
+ */
+function isa_num(arg) = (version_num()>20190100)?
+	is_num(arg)
+	:
+	(arg==arg)?((arg+1)?true:false):false;
+
+/* *** isa_num() testcases *** */
+do_assert(isa_num(0.1)==true,          "isa_num test 00");
+do_assert(isa_num(1)==true,            "isa_num test 01");
+do_assert(isa_num(10)==true,           "isa_num test 02");
+do_assert(isa_num(+1/0)==true,         "isa_num test 03"); //+inf
+do_assert(isa_num(-1/0)==true,         "isa_num test 04"); //-inf
+do_assert(isa_num(0/0)==false,         "isa_num test 05"); //nan
+do_assert(isa_num((1/0)/(1/0))==false, "isa_num test 06"); //nan
+do_assert(isa_num([])==false,          "isa_num test 07");
+do_assert(isa_num([1])==false,         "isa_num test 08");
+do_assert(isa_num(["b"])==false,       "isa_num test 09");
+do_assert(isa_num("")==false,          "isa_num test 10");
+do_assert(isa_num("test")==false,      "isa_num test 11");
+do_assert(isa_num(true)==false,        "isa_num test 12");
+do_assert(isa_num(false)==false,       "isa_num test 13");
+do_assert(isa_num(undef)==false,       "isa_num test 14");
 
 
 /*

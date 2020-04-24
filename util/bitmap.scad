@@ -82,6 +82,7 @@ use <compat.scad>
  */
 module 2dbitmap(bitmap=[[1,0],[0,1]], center=false, expansion=0, vector_mode=false)
 {
+  if (bitmap!=undef) {
 	ylen=len(bitmap)-1;
 
 	for (y=[0:ylen]) {
@@ -101,10 +102,12 @@ module 2dbitmap(bitmap=[[1,0],[0,1]], center=false, expansion=0, vector_mode=fal
 						else
 							cube([1-expansion,1-expansion,clamp_nonnum(bitmap[y][x])], center=center);
 	}
+  }
 }
 
 module 1dbitmap(bitmap=[1,0,1,0,1], center=false, expansion=0, vector_mode=false)
-	2dbitmap([bitmap], center, expansion, vector_mode);
+	if (bitmap!=undef)
+		2dbitmap([bitmap], center, expansion, vector_mode);
 
 /*
  * Examples
@@ -132,3 +135,7 @@ translate([-7,-8,0]) scale([1,2])
 	1dbitmap(bitmap=["red",0,"blue",0,"green"], vector_mode=true);
 translate([-4.5,-10,0]) scale([1,2])
 	1dbitmap(bitmap=["red",0,"blue",0,"green"], vector_mode=true, center=true);
+
+// Check behavior with undef
+1dbitmap(undef);
+2dbitmap(undef);
