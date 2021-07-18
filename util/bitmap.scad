@@ -78,12 +78,14 @@ use <compat.scad>
  *          Value can either be boolean, z-height, or color
  * center - center cubes around the origin
  * expansion - size of gap around each pixel (screendoor)
+ * tolerance - amount to overlap so coincident bits merge
  * vector_mode - create a 2D vector drawing instead of 3D extrusion
  */
-module 2dbitmap(bitmap=[[1,0],[0,1]], center=false, expansion=0, vector_mode=false)
+module 2dbitmap(bitmap=[[1,0],[0,1]], center=false, expansion=0, tolerance=0.001, vector_mode=false)
 {
   if (bitmap!=undef) {
 	ylen=len(bitmap)-1;
+    adjustment=-expansion+tolerance;
 
 	for (y=[0:ylen]) {
 		xlen=len(bitmap[y])-1;
@@ -92,22 +94,22 @@ module 2dbitmap(bitmap=[[1,0],[0,1]], center=false, expansion=0, vector_mode=fal
 				if (is_indexable(bitmap[y][x]))
 					color(bitmap[y][x])
 						if (vector_mode)
-							square([1-expansion,1-expansion], center=center);
+							square([1+adjustment,1+adjustment], center=center);
 						else
-							cube([1-expansion,1-expansion,1], center=center);
+							cube([1+adjustment,1+adjustment,1], center=center);
 				else
 					if (bitmap[y][x])
 						if (vector_mode)
-							square([1-expansion,1-expansion], center=center);
+							square([1+adjustment,1+adjustment], center=center);
 						else
-							cube([1-expansion,1-expansion,clamp_nonnum(bitmap[y][x])], center=center);
+							cube([1+adjustment,1+adjustment,clamp_nonnum(bitmap[y][x])], center=center);
 	}
   }
 }
 
-module 1dbitmap(bitmap=[1,0,1,0,1], center=false, expansion=0, vector_mode=false)
+module 1dbitmap(bitmap=[1,0,1,0,1], center=false, expansion=0, tolerance=0.001, vector_mode=false)
 	if (bitmap!=undef)
-		2dbitmap([bitmap], center, expansion, vector_mode);
+		2dbitmap([bitmap], center, expansion, tolerance, vector_mode);
 
 /*
  * Examples
