@@ -22,11 +22,11 @@
  * Depends on the compat.scad and bitmap.scad library.
  *
  * API:
- *   code_128(codepoints, mark=1, space=0, quiet_zone=0, vector_mode=false,
+ *   code_128(codepoints, bar=1, space=0, quiet_zone=0, vector_mode=false,
        expert_mode=false)
  *     Generates a Code 128 symbol with contents specified by the codepoints
  *     vector.
- *     The mark, space, and quiet_zone parameters can be used to change the
+ *     The bar, space, and quiet_zone parameters can be used to change the
  *     appearance of the symbol. See the bitmap library for more details.
  *     The vector_mode flag determines whether to create 2D vector artwork
  *     instead of 3D solid geometry. See notes/caveats in the bitmap library.
