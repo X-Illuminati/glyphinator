@@ -258,7 +258,16 @@ do_assert(is_indexable(-1/0)==false,        "is_indexable test 18");
  *
  * arg - the argument to clamp
  */
-function clamp_nonnum(arg) = (arg+1)?arg:1;
+function clamp_nonnum(arg) = (version_num()>=20190500)?
+    (
+        is_num(arg)?
+        (
+            (arg+1)?arg:1
+        )
+        :1
+    ):(
+        (arg+1)?arg:1
+    );
 
 /* *** clamp_nonnum() testcases *** */
 do_assert(clamp_nonnum(0)==0,           "clamp_nonnum test 00");
