@@ -22,13 +22,14 @@
  * Depends on compat.scad library.
  *
  * API:
- *   1dbitmap(bitmap, center, expansion, vector_mode)
- *   2dbitmap(bitmap, center, expansion, vector_mode)
+ *   1dbitmap(bitmap, center, pullback, vector_mode)
+ *   2dbitmap(bitmap, center, pullback, vector_mode)
  *     Generate a 1 or 2-Dimensional field of modules based on the provided
  *     bitmap vector. See Bitmap Vectors below.
  *     The center flag determines whether to center the bitmap on the origin.
- *     The expansion value actually shrinks each cube in the x and y
- *     dimension by the specified amount.
+ *     The pullback value shrinks each module in the x and y dimension by the
+ *     specified amount. A negative value will expand the modules so they
+ *     blend into each other.
  *     The vector_mode flag determines whether to create 3D solid geometry
  *     (unit cubes) or 2D vector geometry (squares).
  *
@@ -77,10 +78,10 @@ use <compat.scad>
  * bitmap - 2D vector representing where to place each cube
  *          Value can either be boolean, z-height, or color
  * center - center cubes around the origin
- * expansion - size of gap around each pixel (screendoor)
+ * pullback - size of gap around each pixel (screendoor)
  * vector_mode - create a 2D vector drawing instead of 3D extrusion
  */
-module 2dbitmap(bitmap=[[1,0],[0,1]], center=false, expansion=0, vector_mode=false)
+module 2dbitmap(bitmap=[[1,0],[0,1]], center=false, pullback=0.003, vector_mode=false)
 {
   if (bitmap!=undef) {
 	ylen=len(bitmap)-1;
@@ -92,22 +93,22 @@ module 2dbitmap(bitmap=[[1,0],[0,1]], center=false, expansion=0, vector_mode=fal
 				if (is_indexable(bitmap[y][x]))
 					color(bitmap[y][x])
 						if (vector_mode)
-							square([1-expansion,1-expansion], center=center);
+							square([1-pullback,1-pullback], center=center);
 						else
-							cube([1-expansion,1-expansion,1], center=center);
+							cube([1-pullback,1-pullback,1], center=center);
 				else
 					if (bitmap[y][x])
 						if (vector_mode)
-							square([1-expansion,1-expansion], center=center);
+							square([1-pullback,1-pullback], center=center);
 						else
-							cube([1-expansion,1-expansion,clamp_nonnum(bitmap[y][x])], center=center);
+							cube([1-pullback,1-pullback,clamp_nonnum(bitmap[y][x])], center=center);
 	}
   }
 }
 
-module 1dbitmap(bitmap=[1,0,1,0,1], center=false, expansion=0, vector_mode=false)
+module 1dbitmap(bitmap=[1,0,1,0,1], center=false, pullback=-0.003, vector_mode=false)
 	if (bitmap!=undef)
-		2dbitmap([bitmap], center, expansion, vector_mode);
+		2dbitmap([bitmap], center, pullback, vector_mode);
 
 /*
  * Examples
@@ -115,7 +116,7 @@ module 1dbitmap(bitmap=[1,0,1,0,1], center=false, expansion=0, vector_mode=false
 
 // 1D with z-height
 translate([10,0,0]) scale([1,10,1])
-	1dbitmap(bitmap=[1,1,0,2,0,0,3], expansion=.1);
+	1dbitmap(bitmap=[1,1,0,2,0,0,3], pullback=.1);
 
 // 1D with boolean
 translate([-20,0,0]) scale([1,10,1])

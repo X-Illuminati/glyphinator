@@ -28,19 +28,25 @@
  *   - util/compat.scad
  *
  * API:
- *   UPC_A(string, bar, space, quiet_zone, vector_mode, font, fontsize)
+ *   UPC_A(string, bar=1, space=0, quiet_zone=0, pullback=-0.003,
+ *     vector_mode=false, font=Mono:Bold, fontsize=1.5)
  *     Generates the UPC-A barcode representing string.
- *     The bar, space, and quiet_zone parameters can be used to change the
- *     appearance of the barcode. See the bitmap library for more details.
+ *     The bar, space, quiet_zone, and pullback parameters can be used to
+ *     change the appearance of the barcode. A negative pullback will enlarge
+ *     the modules and cause them to blend together. See the bitmap library
+ *     for more details.
  *     The vector_mode determines whether to create 2D vector artwork instead
  *     of 3D solid geometry. See notes/caveats in the bitmap library.
  *     The font and fontsize control the font used for drawing the text digits
  *     below each symbol.
  *
- *   EAN_13(string, bar, space, quiet_zone, vector_mode, font, fontsize)
+ *   EAN_13(string, bar=1, space=0, quiet_zone=0, pullback=-0.003,
+ *     vector_mode=false, font=Mono:Bold, fontsize=1.5)
  *     Generates the EAN-13 barcode representing string.
- *     The bar, space, and quiet_zone parameters can be used to change the
- *     appearance of the barcode. See the bitmap library for more details.
+ *     The bar, space, quiet_zone, and pullback parameters can be used to
+ *     change the appearance of the barcode. A negative pullback will enlarge
+ *     the modules and cause them to blend together. See the bitmap library
+ *     for more details.
  *     The vector_mode determines whether to create 2D vector artwork instead
  *     of 3D solid geometry. See notes/caveats in the bitmap library.
  *     The font and fontsize control the font used for drawing the text digits
@@ -128,6 +134,7 @@ function upc_symbol_len(symbol) =
  * bar - bar representation
  * space - space representation
  * quiet_zone - representation for quiet zone
+ * pullback - reduce each unit size by this amount
  * (see documentation in bitmap.scad)
  *
  * vector_mode - create a 2D vector drawing instead of 3D extrusion
@@ -135,6 +142,7 @@ function upc_symbol_len(symbol) =
  * reverse - true to mirror the symbol (EAN use)
  */
 module upc_symbol(symbol, bar=1, space=0, quiet_zone=0,
+	pullback=-0.003,
 	vector_mode=false,
 	parity=true, reverse=false)
 {
@@ -150,7 +158,7 @@ module upc_symbol(symbol, bar=1, space=0, quiet_zone=0,
 				(symbol_vector[symbol][index])?B:S
 	];
 
-	1dbitmap(vector, vector_mode=vector_mode);
+	1dbitmap(vector, pullback=pullback, vector_mode=vector_mode);
 }
 
 /*
@@ -187,6 +195,7 @@ function calculate_checkdigit(digits, symbol_length, i=-1) =
  * bar - bar representation
  * space - space representation
  * quiet_zone - representation for quiet zone
+ * pullback - reduce each unit size by this amount
  * (see documentation in bitmap.scad)
  *
  * vector_mode - create a 2D vector drawing instead of 3D extrusion
@@ -196,6 +205,7 @@ function calculate_checkdigit(digits, symbol_length, i=-1) =
  */
 module UPC_base(digits, mode,
 	bar=1, space=0, quiet_zone=0,
+	pullback=-0.003,
 	vector_mode=false,
 	font="Liberation Mono:style=Bold", fontsize=1.5)
 {
@@ -274,6 +284,7 @@ module UPC_base(digits, mode,
 	//along the x-axis
 	module draw_symbol(digits, checkdigit,
 		bar=1, space=0, quiet_zone=0,
+		pullback=pullback,
 		vector_mode=vector_mode,
 		x=0, i=0)
 	{
@@ -283,12 +294,14 @@ module UPC_base(digits, mode,
 					upc_symbol(
 						symbol=get_symbol(digits,checkdigit,i),
 						bar=bar, space=space, quiet_zone=quiet_zone,
+						pullback=pullback,
 						vector_mode=vector_mode,
 						parity=get_parity(digits, i),
 						reverse=get_reverse(digits, i));
 		if (i<16)
 			draw_symbol(digits, checkdigit,
 				bar, space, quiet_zone,
+				pullback,
 				vector_mode,
 				x+upc_symbol_len(get_symbol(digits,checkdigit,i)),
 				i+1);
@@ -378,6 +391,7 @@ module UPC_base(digits, mode,
 	//invoke the modules to draw the actual symbol
 	draw_symbol(digits, checkdigit,
 		bar=bar, space=space, quiet_zone=quiet_zone,
+		pullback=pullback,
 		vector_mode=vector_mode);
 	if (font)
 		if (is_indexable(bar))
@@ -400,6 +414,7 @@ module UPC_base(digits, mode,
  * bar - bar representation
  * space - space representation
  * quiet_zone - representation for quiet zone
+ * pullback - reduce each unit size by this amount
  * (see documentation in bitmap.scad)
  *
  * vector_mode - create a 2D vector drawing instead of 3D extrusion
@@ -408,6 +423,7 @@ module UPC_base(digits, mode,
  * fontsize - font size to use
  */
 module UPC_A(string, bar=1, space=0, quiet_zone=0,
+	pullback=-0.003,
 	vector_mode=false,
 	font="Liberation Mono:style=Bold", fontsize=1.5)
 {
@@ -417,6 +433,7 @@ module UPC_A(string, bar=1, space=0, quiet_zone=0,
 
 	UPC_base(digits, mode=0,
 		bar=bar, space=space, quiet_zone=quiet_zone,
+		pullback=pullback,
 		vector_mode=vector_mode,
 		font=font, fontsize=fontsize);
 }
@@ -431,6 +448,7 @@ module UPC_A(string, bar=1, space=0, quiet_zone=0,
  * bar - bar representation
  * space - space representation
  * quiet_zone - representation for quiet zone
+ * pullback - reduce each unit size by this amount
  * (see documentation in bitmap.scad)
  *
  * vector_mode - create a 2D vector drawing instead of 3D extrusion
@@ -439,6 +457,7 @@ module UPC_A(string, bar=1, space=0, quiet_zone=0,
  * fontsize - font size to use
  */
 module EAN_13(string, bar=1, space=0, quiet_zone=0,
+	pullback=-0.003,
 	vector_mode=false,
 	font="Liberation Mono:style=Bold", fontsize=1.5)
 {
@@ -449,6 +468,7 @@ module EAN_13(string, bar=1, space=0, quiet_zone=0,
 
 	UPC_base(digits, mode=(draw_quiet_arrow)?2:1,
 		bar=bar, space=space, quiet_zone=quiet_zone,
+		pullback=pullback,
 		vector_mode=vector_mode,
 		font=font, fontsize=fontsize);
 }

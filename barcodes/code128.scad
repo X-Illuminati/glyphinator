@@ -22,12 +22,14 @@
  * Depends on the compat.scad and bitmap.scad library.
  *
  * API:
- *   code_128(codepoints, bar=1, space=0, quiet_zone=0, vector_mode=false,
-       expert_mode=false)
+ *   code_128(codepoints, bar=1, space=0, quiet_zone=0, pullback=-0.003,
+ *     vector_mode=false, expert_mode=false)
  *     Generates a Code 128 symbol with contents specified by the codepoints
  *     vector.
- *     The bar, space, and quiet_zone parameters can be used to change the
- *     appearance of the symbol. See the bitmap library for more details.
+ *     The bar, space, quiet_zone, and pullback parameters can be used to
+ *     change the appearance of the symbol. A negative pullback will enlarge
+ *     the modules and cause them to blend together. See the bitmap library
+ *     for more details.
  *     The vector_mode flag determines whether to create 2D vector artwork
  *     instead of 3D solid geometry. See notes/caveats in the bitmap library.
  *     The expert_mode flag should only be used by experts.
@@ -457,12 +459,14 @@ function calculate_checkdigit(symbols, i=-1) =
  * bar - bar representation
  * space - space representation
  * quiet_zone - representation for quiet zone
+ * pullback - reduce each unit size by this amount
  * (see documentation in bitmap.scad)
  *
  * vector_mode - create a 2D vector drawing instead of 3D extrusion
  * expert_mode - only use this if you are an expert
  */
-module code_128(codepoints, bar=1, space=0, quiet_zone=0, vector_mode=false,
+module code_128(codepoints, bar=1, space=0, quiet_zone=0, pullback=-0.003,
+	vector_mode=false,
 	expert_mode=false)
 {
 	start_check = codepoints[0] != START_A()
@@ -509,7 +513,7 @@ module code_128(codepoints, bar=1, space=0, quiet_zone=0, vector_mode=false,
 
 	//draw the resulting vector
 	scale([0.495, 12.7, 1])
-		1dbitmap(module_vector, vector_mode=vector_mode);
+		1dbitmap(module_vector, pullback=pullback, vector_mode=vector_mode);
 }
 
 
