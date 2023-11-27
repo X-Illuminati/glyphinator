@@ -322,15 +322,20 @@ function cs128_c(digits, concatenating=false) =
 // helper function to pair up digits and handle \ue001
 // i is the recursion parameter and indexes into the digits array
 function cs128_c_helper(digits, i=0) =
-	(i>=len(digits))? []: //terminate recursion
-	(digits[i]==FNC1())? //special case
+	// terminate recursion once we reach end of digits
+	(i>=len(digits))? []:
+	// special case for FNC1
+	(digits[i]==FNC1())?
 		concat(102, cs128_c_helper(digits, i+1)):
-	(digits[i]==10 && digits[i+1]==2)? //similar special case
+	// similar special case for 10 02 = FNC1
+	(digits[i]==10 && digits[i+1]==2)?
 		concat(102, cs128_c_helper(digits, i+2)):
-	((digits[i]<10 && digits[i]>=0) && (digits[i+1]<10 && digits[i+1]>=0))?
-		//normal case, pair digits
+	// normal case, pair digits
+	((i+1)<len(digits) && isa_num(digits[i]) && isa_num(digits[i+1]) &&
+	 (digits[i]<10 && digits[i]>=0) && (digits[i+1]<10 && digits[i+1]>=0))?
 		concat(digits[i]*10+digits[i+1], cs128_c_helper(digits, i+2)):
-	cs128_c_helper(digits, i+1); //skip current invalid or unpaired digit
+	// else case, skip current invalid or unpaired digit
+	cs128_c_helper(digits, i+1);
 
 /**** cs128_c() unit-tests ****/
 do_assert(cs128_c([0,1,2])            == [105,1],         "cs128_c test 00");
@@ -344,8 +349,7 @@ do_assert(cs128_c([1,3,FNC1(),FNC1(),2,1]) == [105,13,102,102,21],
 do_assert(cs128_c([1,3,FNC1(),4])     == [105,13,102],    "cs128_c test 07");
 do_assert(cs128_c([7,FNC1(),2,1])     == [105,102,21],    "cs128_c test 08");
 do_assert(cs128_c([7,FNC1(),4])       == [105,102],       "cs128_c test 09");
-do_assert(cs128_c([7,FNC1(),FNC1(),4]) == [105,102,102],
-	"cs128_c test 10");
+do_assert(cs128_c([7,FNC1(),FNC1(),4]) == [105,102,102],  "cs128_c test 10");
 do_assert(cs128_c([1,3,10,2,2,1])     == [105,13,102,21], "cs128_c test 11");
 do_assert(cs128_c([1,3,10,2,10,2,2,1]) == [105,13,102,102,21],
 	"cs128_c test 12");

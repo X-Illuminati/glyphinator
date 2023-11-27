@@ -19,7 +19,7 @@
  *****************************************************************************
  * Usage:
  * Include this file with the "use" tag.
- * Depends on the reed-solomon-datamatrix.scad library.
+ * Depends on the reed-solomon-datamatrix.scad and compat.scad libraries.
  * When run on its own, all echo statements in this library should print
  * "true".
  *
@@ -59,6 +59,7 @@
  *  - Change echos to asserts (future OpenSCAD version)
  *
  *****************************************************************************/
+use <compat.scad>
 use <reed-solomon-datamatrix.scad>
 
 /*
@@ -102,87 +103,133 @@ function dm_prop_y_adjust(properties) = properties[6];
 
 /*
  * dm_get_props_by_data_size
- * Return a row from dm_prop_table based data size.
+ * Return a row from dm_prop_table based on data size.
  * Recursively looks up the row with dcw >= data_size.
  *
  * data_size - number of data codewords
  */
 function dm_get_props_by_data_size(data_size, i=0) =
+	(!isa_num(data_size))?undef:
 	(data_size<0)?undef:
-	(data_size==true)?undef:
-	(data_size==false)?undef:
 	let(p=dm_prop_table[i])
 		(p==undef)?undef:
 		(dm_prop_data_size(p)>=data_size)?p:
 		dm_get_props_by_data_size(data_size, i+1);
 
 echo("*** dm_get_props_by_data_size() testcases ***");
-echo(dm_get_props_by_data_size(-1)==undef);
-echo(dm_get_props_by_data_size(0)!=undef);
-echo(dm_get_props_by_data_size(1)!=undef);
-echo(dm_get_props_by_data_size(44)!=undef);
-echo(dm_get_props_by_data_size(true)==undef);
-echo(dm_get_props_by_data_size(false)==undef);
-echo(dm_get_props_by_data_size(45)==undef); //will need adjustment in the future
+do_assert(dm_get_props_by_data_size(-1)==undef,
+	"dm_get_props_by_data_size test 00");
+do_assert(dm_get_props_by_data_size(0)!=undef,
+	"dm_get_props_by_data_size test 01");
+do_assert(dm_get_props_by_data_size(1)!=undef,
+	"dm_get_props_by_data_size test 02");
+do_assert(dm_get_props_by_data_size(44)!=undef,
+	"dm_get_props_by_data_size test 03");
+do_assert(dm_get_props_by_data_size(true)==undef,
+	"dm_get_props_by_data_size test 04");
+do_assert(dm_get_props_by_data_size(false)==undef,
+	"dm_get_props_by_data_size test 05");
+//the tested value will need adjustment if more rows are added to the table
+do_assert(dm_get_props_by_data_size(45)==undef,
+	"dm_get_props_by_data_size test 06");
 
 /*
  * dm_get_props_by_total_size
- * Return a row from dm_prop_table based total size.
+ * Return a row from dm_prop_table based on total size.
  * Recursively looks up the row with tcw == total_size.
  *
  * total_size - number of total codewords
  */
 function dm_get_props_by_total_size(total_size, i=0) =
+	(!isa_num(total_size))?undef:
 	(total_size<8)?undef:
-	(total_size==true)?undef:
-	(total_size==false)?undef:
 	let(p=dm_prop_table[i])
 		(p==undef)?undef:
 		(dm_prop_total_size(p)==total_size)?p:
 		dm_get_props_by_total_size(total_size, i+1);
 
 echo("*** dm_get_props_by_total_size() testcases ***");
-echo(dm_get_props_by_total_size(-1)==undef);
-echo(dm_get_props_by_total_size(0)==undef);
-echo(dm_get_props_by_total_size(1)==undef);
-echo(dm_get_props_by_total_size(3)==undef);
-echo(dm_get_props_by_total_size(8)!=undef);
-echo(dm_get_props_by_total_size(9)==undef);
-echo(dm_get_props_by_total_size(32)!=undef);
-echo(dm_get_props_by_total_size(44)==undef);
-echo(dm_get_props_by_total_size(72)!=undef);
-echo(dm_get_props_by_total_size(true)==undef);
-echo(dm_get_props_by_total_size(false)==undef);
-echo(dm_get_props_by_total_size(73)==undef); //will need adjustment in the future
+do_assert(dm_get_props_by_total_size(-1)==undef,
+	"dm_get_props_by_total_size test 00");
+do_assert(dm_get_props_by_total_size(0)==undef,
+	"dm_get_props_by_total_size test 01");
+do_assert(dm_get_props_by_total_size(1)==undef,
+	"dm_get_props_by_total_size test 02");
+do_assert(dm_get_props_by_total_size(3)==undef,
+	"dm_get_props_by_total_size test 03");
+do_assert(dm_get_props_by_total_size(8)!=undef,
+	"dm_get_props_by_total_size test 04");
+do_assert(dm_get_props_by_total_size(9)==undef,
+	"dm_get_props_by_total_size test 05");
+do_assert(dm_get_props_by_total_size(32)!=undef,
+	"dm_get_props_by_total_size test 06");
+do_assert(dm_get_props_by_total_size(44)==undef,
+	"dm_get_props_by_total_size test 07");
+do_assert(dm_get_props_by_total_size(72)!=undef,
+	"dm_get_props_by_total_size test 08");
+do_assert(dm_get_props_by_total_size(true)==undef,
+	"dm_get_props_by_total_size test 09");
+do_assert(dm_get_props_by_total_size(false)==undef,
+	"dm_get_props_by_total_size test 10");
+//the tested value will need adjustment if more rows are added to the table
+do_assert(dm_get_props_by_total_size(73)==undef,
+	"dm_get_props_by_total_size test 11");
 
 echo("*** combination testcases ***");
-echo(dm_prop_data_size(dm_get_props_by_data_size(0))==3);
-echo(dm_prop_data_size(dm_get_props_by_data_size(1))==3);
-echo(dm_prop_data_size(dm_get_props_by_data_size(3))==3);
-echo(dm_prop_data_size(dm_get_props_by_data_size(10))==12);
-echo(dm_prop_data_size(dm_get_props_by_data_size(15))==18);
-echo(dm_prop_data_size(dm_get_props_by_data_size(44))==44);
-echo(dm_prop_data_size(dm_get_props_by_total_size(24))==12);
-echo(dm_prop_data_size(dm_get_props_by_total_size(40))==22);
-echo(dm_prop_data_size(dm_get_props_by_total_size(72))==44);
-echo(dm_prop_total_size(dm_get_props_by_data_size(0))==8);
-echo(dm_prop_total_size(dm_get_props_by_data_size(1))==8);
-echo(dm_prop_total_size(dm_get_props_by_data_size(3))==8);
-echo(dm_prop_total_size(dm_get_props_by_data_size(14))==32);
-echo(dm_prop_total_size(dm_get_props_by_data_size(22))==40);
-echo(dm_prop_total_size(dm_get_props_by_data_size(44))==72);
-echo(dm_prop_total_size(dm_get_props_by_total_size(8))==8);
-echo(dm_prop_total_size(dm_get_props_by_total_size(32))==32);
-echo(dm_prop_total_size(dm_get_props_by_total_size(50))==50);
-echo(dm_prop_dimensions(dm_get_props_by_data_size(0))==[10,10]);
-echo(dm_prop_dimensions(dm_get_props_by_data_size(1))==[10,10]);
-echo(dm_prop_dimensions(dm_get_props_by_data_size(3))==[10,10]);
-echo(dm_prop_dimensions(dm_get_props_by_data_size(8))==[14,14]);
-echo(dm_prop_dimensions(dm_get_props_by_data_size(40))==[26,26]);
-echo(dm_prop_dimensions(dm_get_props_by_data_size(44))==[26,26]);
-echo(dm_prop_dimensions(dm_get_props_by_total_size(18))==[14,14]);
-echo(dm_prop_dimensions(dm_get_props_by_total_size(40))==[20,20]);
-echo(dm_prop_dimensions(dm_get_props_by_total_size(60))==[24,24]);
+do_assert(dm_prop_data_size(dm_get_props_by_data_size(0))==3,
+	"combination test 00");
+do_assert(dm_prop_data_size(dm_get_props_by_data_size(1))==3,
+	"combination test 01");
+do_assert(dm_prop_data_size(dm_get_props_by_data_size(3))==3,
+	"combination test 02");
+do_assert(dm_prop_data_size(dm_get_props_by_data_size(10))==12,
+	"combination test 03");
+do_assert(dm_prop_data_size(dm_get_props_by_data_size(15))==18,
+	"combination test 04");
+do_assert(dm_prop_data_size(dm_get_props_by_data_size(44))==44,
+	"combination test 05");
+do_assert(dm_prop_data_size(dm_get_props_by_total_size(24))==12,
+	"combination test 06");
+do_assert(dm_prop_data_size(dm_get_props_by_total_size(40))==22,
+	"combination test 07");
+do_assert(dm_prop_data_size(dm_get_props_by_total_size(72))==44,
+	"combination test 08");
+do_assert(dm_prop_total_size(dm_get_props_by_data_size(0))==8,
+	"combination test 09");
+do_assert(dm_prop_total_size(dm_get_props_by_data_size(1))==8,
+	"combination test 10");
+do_assert(dm_prop_total_size(dm_get_props_by_data_size(3))==8,
+	"combination test 11");
+do_assert(dm_prop_total_size(dm_get_props_by_data_size(14))==32,
+	"combination test 12");
+do_assert(dm_prop_total_size(dm_get_props_by_data_size(22))==40,
+	"combination test 13");
+do_assert(dm_prop_total_size(dm_get_props_by_data_size(44))==72,
+	"combination test 14");
+do_assert(dm_prop_total_size(dm_get_props_by_total_size(8))==8,
+	"combination test 15");
+do_assert(dm_prop_total_size(dm_get_props_by_total_size(32))==32,
+	"combination test 16");
+do_assert(dm_prop_total_size(dm_get_props_by_total_size(50))==50,
+	"combination test 17");
+do_assert(dm_prop_dimensions(dm_get_props_by_data_size(0))==[10,10],
+	"combination test 18");
+do_assert(dm_prop_dimensions(dm_get_props_by_data_size(1))==[10,10],
+	"combination test 19");
+do_assert(dm_prop_dimensions(dm_get_props_by_data_size(3))==[10,10],
+	"combination test 20");
+do_assert(dm_prop_dimensions(dm_get_props_by_data_size(8))==[14,14],
+	"combination test 21");
+do_assert(dm_prop_dimensions(dm_get_props_by_data_size(40))==[26,26],
+	"combination test 22");
+do_assert(dm_prop_dimensions(dm_get_props_by_data_size(44))==[26,26],
+	"combination test 23");
+do_assert(dm_prop_dimensions(dm_get_props_by_total_size(18))==[14,14],
+	"combination test 24");
+do_assert(dm_prop_dimensions(dm_get_props_by_total_size(40))==[20,20],
+	"combination test 25");
+do_assert(dm_prop_dimensions(dm_get_props_by_total_size(60))==[24,24],
+	"combination test 26");
 
 EOM = 129; // end-of-message (first padding byte)
 
@@ -210,31 +257,43 @@ function dm_pad(data, data_size=undef) =
 		];
 
 echo("*** dm_pad() testcases ***");
-echo(dm_pad([1,2,3,4,5],4)==undef);
-echo(dm_pad([],44)==[129,175,70,220,115,11,161,56,206,101,251,147,42,192,87,237,133,28,178,73,223,118,14,164,59,209,104,254,150,45,195,90,240,136,31,181,76,226,121,17,167,62,212,107]);
-echo(dm_pad([88,106,108,106,113,102,101,106,98],12)==[88,106,108,106,113,102,101,106,98,129,251,147]);
-echo(dm_pad([88,106,108,106,113,102,101,106,98])==[88,106,108,106,113,102,101,106,98,129,251,147]);
-echo(dm_pad([])==[129,175,70]);
-echo(dm_pad([1])==[1,129,70]);
-echo(dm_pad([1,2])==[1,2,129]);
-echo(dm_pad([1,2,3])==[1,2,3]);
-echo(dm_pad([1,2,3,4])==[1,2,3,4,129]);
-echo(dm_pad([1,2,3,4,5,6,7,8,9,10,11,12,13])==[1,2,3,4,5,6,7,8,9,10,11,12,13,129,87,237,133,28]);
+do_assert(dm_pad([1,2,3,4,5],4)==undef,                  "dm_pad test 00");
+do_assert(dm_pad([],44)
+	==[129,175,70,220,115,11,161,56,206,101,251,147,42,192,87,237,133,28,178,73,223,118,14,164,59,209,104,254,150,45,195,90,240,136,31,181,76,226,121,17,167,62,212,107],
+	"dm_pad test 01");
+do_assert(dm_pad([88,106,108,106,113,102,101,106,98],12)
+	==[88,106,108,106,113,102,101,106,98,129,251,147],   "dm_pad test 02");
+do_assert(dm_pad([88,106,108,106,113,102,101,106,98])
+	==[88,106,108,106,113,102,101,106,98,129,251,147],   "dm_pad test 03");
+do_assert(dm_pad([])==[129,175,70],                      "dm_pad test 04");
+do_assert(dm_pad([1])==[1,129,70],                       "dm_pad test 05");
+do_assert(dm_pad([1,2])==[1,2,129],                      "dm_pad test 06");
+do_assert(dm_pad([1,2,3])==[1,2,3],                      "dm_pad test 07");
+do_assert(dm_pad([1,2,3,4])==[1,2,3,4,129],              "dm_pad test 08");
+do_assert(dm_pad([1,2,3,4,5,6,7,8,9,10,11,12,13])
+	==[1,2,3,4,5,6,7,8,9,10,11,12,13,129,87,237,133,28], "dm_pad test 09");
 
 /*
  * dm_ecc - append DataMatrix ECC200 error correction bytes
  *
  * data - the vector of data bytes
  */
-function dm_ecc(data) =
+function dm_ecc(data) = isa_list(data)?
 	let(p=dm_get_props_by_data_size(len(data)),
 		dcw=dm_prop_data_size(p),
 		ecw=dm_prop_ecc_size(p))
 		(dcw==undef || dcw!=len(data))?undef:
-		concat(data,rs301_ecc(data,dcw,ecw));
+		concat(data,rs301_ecc(data,dcw,ecw))
+	:undef;
 
 echo("*** dm_ecc() testcases ***");
-echo(dm_ecc()==undef);
-echo(dm_ecc([10,20])==undef);
-echo(dm_ecc([88,106,108,106,113,102,101,106,98,129,251,147])
-	==[88,106,108,106,113,102,101,106,98,129,251,147,104,216,88,39,233,202,71,217,26,92,25,232]);
+do_assert(dm_ecc()==undef,        "dm_ecc test 00");
+do_assert(dm_ecc(undef)==undef,   "dm_ecc test 01");
+do_assert(dm_ecc([])==undef,      "dm_ecc test 02");
+do_assert(dm_ecc(false)==undef,   "dm_ecc test 03");
+do_assert(dm_ecc(true)==undef,    "dm_ecc test 04");
+do_assert(dm_ecc("")==undef,      "dm_ecc test 05");
+do_assert(dm_ecc([10,20])==undef, "dm_ecc test 06");
+do_assert(dm_ecc([88,106,108,106,113,102,101,106,98,129,251,147])
+	==[88,106,108,106,113,102,101,106,98,129,251,147,104,216,88,39,233,202,71,217,26,92,25,232],
+	"dm_ecc test 07");

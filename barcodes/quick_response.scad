@@ -25,6 +25,7 @@
  * - util/bitlib.scad
  * - util/bitmap.scad
  * - util/quick_response-util.scad
+ *   - util/compat.scad
  *   - util/bitlib.scad
  *   - util/reed-solomon-quick_response.scad
  *     - util/bitlib.scad
@@ -134,9 +135,9 @@ function qr_numeric(digits) =
 					(d2==undef)?4:
 					(d3==undef)?7:
 					10,
-				v1=(d1>=0 && d1<=9)?d1:undef,
-				v2=(d2>=0 && d2<=9)?d2:undef,
-				v3=(d3>=0 && d3<=9)?d3:undef,
+				v1=(d1!=undef && d1>=0 && d1<=9)?d1:undef,
+				v2=(d2!=undef && d2>=0 && d2<=9)?d2:undef,
+				v3=(d3!=undef  && d3>=0 && d3<=9)?d3:undef,
 				val=(v1==undef)?0:
 					(v2==undef)?v1:
 					(v3==undef)?v1*10+v2:
@@ -705,7 +706,8 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 
 /* Examples */
 example=2;
-//example 0 - unconfirmed validity - test for numeric mode and alphanum mode (also sets vector_mode for 2D rendering test)
+
+//example 0 - Simple example - numeric with non-multiple-of-3 digits
 //example 1 - Version 1, Mask 1, ECC High - From https://en.wikipedia.org/wiki/File:Qr-1.png
 //example 2 - Version 2, Mask 2, ECC High - From https://en.wikipedia.org/wiki/File:Qr-2.png
 //example 3 - Version 3, Mask 1, ECC High - From https://en.wikipedia.org/wiki/File:Qr-3.png
@@ -715,15 +717,10 @@ example=2;
 //example 7 - Version 3, Mask 7, ECC Low  - From https://en.wikipedia.org/wiki/File:QRCode-1-Intro.png
 //example 8 - Version 4, Mask 2, ECC Low  - From https://commons.wikimedia.org/wiki/File:Qrcode-WikiCommons-app-iOS.png
 //example 9 - Version 5/6, Mask 3, ECC High - From https://commons.wikimedia.org/wiki/File:QR_code_on_oBike.jpg
+//example 10 - unconfirmed validity - test for numeric mode and alphanum mode (also sets vector_mode for 2D rendering test)
 
 if (example==0)
-	quick_response(
-		concat(
-			qr_alphanum("+ASDF://$ %"),
-			qr_numeric([7,9,1,4,5])
-		),
-		mark="black",
-		vector_mode=true);
+	quick_response(qr_numeric([0,1,2,3,4,5,6,7,8,9]), mark="black");
 
 if (example==1)
 	quick_response(
@@ -817,3 +814,12 @@ if (example==9)
 		),
 		mask=3, ecc_level=3, version=6,
 		mark="black");
+
+if (example==10)
+	quick_response(
+		concat(
+			qr_alphanum("+ASDF://$ %"),
+			qr_numeric([7,9,1,4,5])
+		),
+		mark="black",
+		vector_mode=true);

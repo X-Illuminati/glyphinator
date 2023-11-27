@@ -112,10 +112,12 @@ function qr_prop_align_count(properties)=properties[2];
 function qr_prop_total_size(properties)=properties[3];
 function qr_prop_remainder(properties)=properties[4];
 function qr_prop_ecc_size(properties, ecc_level)=
-	((ecc_level<0) || (ecc_level>3))?undef:
+	(properties==undef)?undef:
+	(!isa_num(ecc_level) || (ecc_level<0) || (ecc_level>3))?undef:
 	properties[5+ecc_level];
 function qr_prop_data_size(properties, ecc_level)=
-	((ecc_level<0) || (ecc_level>3))?undef:
+	(properties==undef)?undef:
+	(!isa_num(ecc_level) || (ecc_level<0) || (ecc_level>3))?undef:
 	qr_prop_total_size(properties)-qr_prop_ecc_size(properties, ecc_level);
 function qr_prop_blocks(properties, ecc_level) =
 	let (ecc=qr_prop_ecc_size(properties, ecc_level))
@@ -149,9 +151,10 @@ function qr_prop_block_lens(properties, ecc_level) =
  * version - symbol version
  */
 function qr_get_props_by_version(version)=
+	!isa_num(version)?undef:
 	qr_prop_table[version-1];
 
-/* *** qr_get_props_by_version() testcases *** */
+echo("*** qr_get_props_by_version() testcases ***");
 do_assert(qr_get_props_by_version(-1)==undef,
 	"qr_get_props_by_version test 00");
 do_assert(qr_get_props_by_version(0)==undef,
@@ -181,14 +184,16 @@ do_assert(qr_get_props_by_version(7)==undef,
  *   0=Low, 1=Mid, 2=Quality, 3=High
  */
 function qr_get_props_by_data_size(data_size, ecc_level, i=0) =
-	(!isa_num(data_size))?undef:
-	(data_size<0)?undef:
+	(!isa_num(data_size) || !isa_num(ecc_level))?undef:
+	((data_size<0) || (ecc_level<0))?undef:
 	let(p=qr_prop_table[i])
 		(p==undef)?undef:
-		(qr_prop_data_size(p, ecc_level)>=data_size)?p:
-		qr_get_props_by_data_size(data_size, ecc_level, i+1);
+		let(e=qr_prop_data_size(p, ecc_level))
+			(e==undef)?undef:
+			(e>=data_size)?p:
+			qr_get_props_by_data_size(data_size, ecc_level, i+1);
 
-/* *** qr_get_props_by_data_size() testcases *** */
+echo("*** qr_get_props_by_data_size() testcases ***");
 do_assert(qr_get_props_by_data_size(-1, 0)==undef,
 	"qr_get_props_by_data_size test 00");
 do_assert(qr_get_props_by_data_size(0, 0)!=undef,
@@ -224,15 +229,14 @@ do_assert(qr_get_props_by_data_size(137, 0)==undef,
  * total_size - number of total codewords
  */
 function qr_get_props_by_total_size(total_size, i=0) =
+	(!isa_num(total_size))?undef:
 	(total_size<26)?undef:
-	(total_size==true)?undef:
-	(total_size==false)?undef:
 	let(p=qr_prop_table[i])
 		(p==undef)?undef:
 		(qr_prop_total_size(p)==total_size)?p:
 		qr_get_props_by_total_size(total_size, i+1);
 
-/* *** qr_get_props_by_total_size() testcases *** */
+echo("*** qr_get_props_by_total_size() testcases ***");
 do_assert(qr_get_props_by_total_size(-1)==undef,
 	"qr_get_props_by_total_size test 00");
 do_assert(qr_get_props_by_total_size(0)==undef,
@@ -262,13 +266,13 @@ do_assert(qr_get_props_by_total_size(173)==undef,
 	"qr_get_props_by_total_size test 12");
 
 
-/* *** qr_prop_version testcases *** */
+echo("*** qr_prop_version testcases ***");
 do_assert(len(qr_prop_table)==6, "prop table changed, check for loop here");
 for (i=[0:len(qr_prop_table)-1])
 	do_assert(qr_prop_version(qr_prop_table[i])==(i+1),
 		str("qr_prop_version test ", i));
 
-/* *** qr_prop_blocks testcases *** */
+echo("*** qr_prop_blocks testcases ***");
 do_assert(len(qr_prop_table)==6, "prop table changed, check for loops here");
 for (i=[0:len(qr_prop_table)-1]) {
 	lev=0;
@@ -295,7 +299,7 @@ for (i=[0:len(qr_prop_table)-1]) {
 		==test_table[i], str("qr_prop_blocks(high) test ", i));
 }
 
-/* *** qr_prop_block_lens testcases *** */
+echo("*** qr_prop_block_lens testcases ***");
 do_assert(len(qr_prop_table)==6, "prop table changed, add testcases here");
 
 //we'll just spot check a few of these -
@@ -340,7 +344,7 @@ do_assert(qr_prop_block_lens(qr_prop_table[5],3)
 	==[[28,15],[28,15],[28,15],[28,15]],
 	"qr_prop_block_lens test 12");
 
-/* *** combination testcases *** */
+echo("*** combination testcases ***");
 do_assert(qr_prop_data_size(qr_get_props_by_version(1), 3)==9,
 	"property getter combination test 00");
 do_assert(qr_prop_data_size(qr_get_props_by_version(1), 2)==13,
@@ -491,7 +495,7 @@ function qr_split_bits(x) =
 	let (l = qr_bitfield_len(x), v = qr_bitfield_val(x))
 		[for (i=[l-1:-1:0]) [1, bit(v,i)?1:0]];
 
-/* *** qr_split_bits() testcases *** */
+echo("*** qr_split_bits() testcases ***");
 do_assert(qr_split_bits(0)==
 	[[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0],[1,0]],
 	"qr_split_bits test 00");
@@ -533,7 +537,7 @@ function qr_combine_words(vec, i=0) =
 				pow(2,qr_bitfield_len(x))+qr_bitfield_val(x)
 		];
 
-/* *** qr_combine_words() testcases *** */
+echo("*** qr_combine_words() testcases ***");
 do_assert(qr_combine_words([[3,5]])==[3,5],
 	"qr_combine_words test 00");
 do_assert(qr_combine_words([[3,3],[2,3]])==[5,15],
@@ -585,7 +589,7 @@ function qr_compact_data(data) =
 					bitfield
 	];
 
-/* *** qr_compact_data() testcases *** */
+echo("*** qr_compact_data() testcases ***");
 do_assert(qr_compact_data([0])==[0], //0x00
 	"qr_compact_data test 00");
 do_assert(qr_compact_data([qr_bitfield(8,4)])==[qr_bitfield(8,4)], //0x8.
@@ -663,7 +667,7 @@ function qr_pad(data, ecc_level, data_size=undef) =
 		//  compacted vector that might end with a partial byte
 		//  that is all 0 and less than 4-bits.
 		q=((qr_bitfield_val(d[s-1])==0)
-			&& (qr_bitfield_len(d[s-1]<=4))),
+			&& (qr_bitfield_len(d[s-1])<=4)),
 		//determine number of data codewords
 		dcw=(data_size!=undef)?
 			data_size: //use data_size if provided
@@ -690,7 +694,7 @@ function qr_pad(data, ecc_level, data_size=undef) =
 				((i-s)%2==0)?236:17
 		];
 
-/* *** qr_pad() testcases *** */
+echo("*** qr_pad() testcases ***");
 do_assert(qr_pad([1,2,3,4,5],data_size=4)==undef,
 	"qr_pad test 00");
 do_assert(qr_pad([1,2,3,4,5],0,data_size=4)==undef,
@@ -870,7 +874,7 @@ function qr_ecc(data, version, ecc_level=2) =
 		)
 			concat(qr_interleave(data_slices),qr_interleave(ecc_blocks));
 
-/* *** qr_ecc() testcases *** */
+echo("*** qr_ecc() testcases ***");
 do_assert(qr_ecc()==undef,
 	"qr_ecc test 00");
 do_assert(qr_ecc([10,20])==undef,
