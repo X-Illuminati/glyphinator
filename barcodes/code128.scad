@@ -23,7 +23,7 @@
  *
  * API:
  *   code_128(codepoints, bar=1, space=0, quiet_zone=0, pullback=-0.003,
- *     vector_mode=false, expert_mode=false)
+ *     vector_mode=false, center=false, expert_mode=false)
  *     Generates a Code 128 symbol with contents specified by the codepoints
  *     vector.
  *     The bar, space, quiet_zone, and pullback parameters can be used to
@@ -32,6 +32,8 @@
  *     for more details.
  *     The vector_mode flag determines whether to create 2D vector artwork
  *     instead of 3D solid geometry. See notes/caveats in the bitmap library.
+ *     The center flag works in the usual way to center the barcode on the
+ *     origin.
  *     The expert_mode flag should only be used by experts.
  *
  *   cs128_a(string, concatenating=false)
@@ -467,10 +469,12 @@ function calculate_checkdigit(symbols, i=-1) =
  * (see documentation in bitmap.scad)
  *
  * vector_mode - create a 2D vector drawing instead of 3D extrusion
+ * center - set to true to center the barcode on the origin
  * expert_mode - only use this if you are an expert
  */
 module code_128(codepoints, bar=1, space=0, quiet_zone=0, pullback=-0.003,
 	vector_mode=false,
+	center=false,
 	expert_mode=false)
 {
 	start_check = codepoints[0] != START_A()
@@ -517,7 +521,8 @@ module code_128(codepoints, bar=1, space=0, quiet_zone=0, pullback=-0.003,
 
 	//draw the resulting vector
 	scale([0.495, 12.7, 1])
-		1dbitmap(module_vector, pullback=pullback, vector_mode=vector_mode);
+		1dbitmap(module_vector, pullback=pullback, vector_mode=vector_mode,
+			center=center);
 }
 
 
@@ -536,6 +541,7 @@ example=1;
 //example 10 - 128A - PJJ123C - expert mode example
 //example 11 - Invalid - test assert for invalid start symbol
 //example 12 - Invalid - expert mode allows generating an invalid barcode
+//example 13 - Same as example 0 but with center=true
 
 if (example==0)
 	code_128(concat(cs128_b("RI"),
@@ -601,3 +607,10 @@ if (example==11)
 //same as example 11 - expert mode allows module generation anyway
 if (example==12)
 	code_128([1, 16, 33, 73, 99, 58], bar="black", expert_mode=true);
+
+//example showing center=true
+if (example==13)
+	code_128(concat(cs128_b("RI"),
+			cs128_c([4,7,6,3,9,4,6,5,]),
+			cs128_b("2CH")),
+		bar=3, space=0, quiet_zone=[1,.8,.4,.6], center=true);
