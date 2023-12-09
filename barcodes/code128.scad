@@ -94,6 +94,11 @@
  *     or mode switch markers (either in the supplied string or concatenated
  *     with the result of this function).
  *
+ *   code_128_width(codepoints, expert_mode=false)
+ *     Calculates the width (in mm) of a Code 128 symbol with contents
+ *     specified by the codepoints vector.
+ *     The expert_mode flag has the same usage as for the code_128 API.
+ *
  *****************************************************************************/
 use <../util/compat.scad>
 use <../util/bitmap.scad>
@@ -117,6 +122,9 @@ function SHIFT_A() = 98;
 function SHIFT_B() = 98;
 function STOP()    = 106;
 function QUIET()   = 107;
+
+/* The scale of each module according to the standard */
+function STANDARD_SYMBOL_SCALE() = [0.495, 12.7, 1];
 
 /*
  * symbol definitions arranged in a convenient array
@@ -455,6 +463,221 @@ function calculate_checkdigit(symbols, i=-1) =
 		(calculate_checkdigit(symbols, i=0)%103):
 	symbols[i]*((i==0)?1:i) + calculate_checkdigit(symbols, i+1);
 
+/**** calculate_checkdigit() unit-tests ****/
+do_assert(calculate_checkdigit([0,1,2,3,4])
+	== 30,  "calculate_checkdigit test 00");
+do_assert(calculate_checkdigit([0,1,2,3,4,0])
+	== 30,  "calculate_checkdigit test 01");
+do_assert(calculate_checkdigit([0,1,2,3,4,0,0])
+	== 30,  "calculate_checkdigit test 02");
+do_assert(calculate_checkdigit([1,2,3,4,0])
+	== 21,  "calculate_checkdigit test 03");
+do_assert(calculate_checkdigit([0,0,1,2,3,4])
+	== 40,  "calculate_checkdigit test 04");
+do_assert(calculate_checkdigit([1,2,3,4,103])
+	== 21,  "calculate_checkdigit test 04");
+do_assert(calculate_checkdigit([1,2,3,4,103,103])
+	== 21,  "calculate_checkdigit test 05");
+do_assert(calculate_checkdigit([1,2,3,4,103,103,103])
+	== 21,  "calculate_checkdigit test 06");
+do_assert(calculate_checkdigit([103,1,2,3,4])
+	== 30,  "calculate_checkdigit test 07");
+do_assert(calculate_checkdigit([1,2,103,3,4])
+	== 28,  "calculate_checkdigit test 08");
+do_assert(calculate_checkdigit([103,103,1,2,3,4,103])
+	== 40,  "calculate_checkdigit test 09");
+do_assert(calculate_checkdigit([100,101,102,103,104])
+	== 100, "calculate_checkdigit test 10");
+do_assert(calculate_checkdigit([100,101,102,103,104,0])
+	== 100, "calculate_checkdigit test 11");
+do_assert(calculate_checkdigit([100,101,102,103,104,0,0])
+	== 100, "calculate_checkdigit test 12");
+do_assert(calculate_checkdigit([101,102,103,104,100])
+	== 91,  "calculate_checkdigit test 13");
+do_assert(calculate_checkdigit([0,100,101,102,103,104])
+	== 98,  "calculate_checkdigit test 14");
+do_assert(calculate_checkdigit([101,102,103,104,103,103])
+	== 0,   "calculate_checkdigit test 15");
+do_assert(calculate_checkdigit([101,102,103,104,103,103,103])
+	== 0,   "calculate_checkdigit test 16");
+do_assert(calculate_checkdigit([103,101,102,103,104])
+	== 0,   "calculate_checkdigit test 17");
+do_assert(calculate_checkdigit([101,102,103,103,104])
+	== 1,   "calculate_checkdigit test 18");
+do_assert(calculate_checkdigit([103,103,101,102,103,104,103])
+	== 101, "calculate_checkdigit test 19");
+echo(calculate_checkdigit([1,2,3,3,4,4,3,3,2,1])
+	== 15, "calculate_checkdigit test 20");
+
+
+/*
+ * compute_bitmap_vector - helper function to create the bitmap
+ *
+ * codepoints - vector of codepoints to encode
+ *   see the API at the top of the file for the helper functions to generate
+ *   this vector
+ */
+function compute_bitmap_vector(codepoints) =
+	//normalize the codepoints and add furniture
+	let(
+		//normalize the vector by replacing start symbols in the middle of the
+		//vector with switch symbols
+		norm_vec = [
+			for(i=[0:len(codepoints)-1])
+				(i>0 && codepoints[i]==START_A())? CODE_A():
+				(i>0 && codepoints[i]==START_B())? CODE_B():
+				(i>0 && codepoints[i]==START_C())? CODE_C():
+				codepoints[i]
+		]
+	)
+	//add the checkdigit and wrapping quiet zone and stop symbols
+	concat(
+		QUIET(),
+		[ for(i=norm_vec) i ],
+		calculate_checkdigit(norm_vec),
+		STOP(),
+		QUIET()
+	);
+
+/**** compute_bitmap_vector() unit-tests ****/
+do_assert(compute_bitmap_vector([0,1,2,3,4])
+	== [107, 0, 1, 2, 3, 4, 30, 106, 107], "compute_bitmap_vector test 00");
+do_assert(compute_bitmap_vector([QUIET()])
+	== [107, 107, 0, 106, 107],            "compute_bitmap_vector test 01");
+do_assert(compute_bitmap_vector([START_A(),START_A(),32])
+	== [107, 103, 101, 32, 62, 106, 107],  "compute_bitmap_vector test 02");
+do_assert(compute_bitmap_vector([START_A(),START_B(),32])
+	== [107, 103, 100, 32, 61, 106, 107],  "compute_bitmap_vector test 03");
+do_assert(compute_bitmap_vector([START_A(),START_C(),32])
+	== [107, 103, 99, 32, 60, 106, 107],   "compute_bitmap_vector test 04");
+do_assert(compute_bitmap_vector([START_B(),START_A(),32])
+	== [107, 104, 101, 32, 63, 106, 107],  "compute_bitmap_vector test 05");
+do_assert(compute_bitmap_vector([START_B(),START_B(),32])
+	== [107, 104, 100, 32, 62, 106, 107],  "compute_bitmap_vector test 06");
+do_assert(compute_bitmap_vector([START_B(),START_C(),32])
+	== [107, 104, 99, 32, 61, 106, 107],   "compute_bitmap_vector test 07");
+do_assert(compute_bitmap_vector([START_C(),START_A(),32])
+	== [107, 105, 101, 32, 64, 106, 107],  "compute_bitmap_vector test 08");
+do_assert(compute_bitmap_vector([START_C(),START_B(),32])
+	== [107, 105, 100, 32, 63, 106, 107],  "compute_bitmap_vector test 09");
+do_assert(compute_bitmap_vector([START_C(),START_C(),32])
+	== [107, 105, 99, 32, 62, 106, 107],   "compute_bitmap_vector test 10");
+do_assert(compute_bitmap_vector([START_A(),32,CODE_A()])
+	== [107, 103, 32, 101, 28, 106, 107],  "compute_bitmap_vector test 11");
+do_assert(compute_bitmap_vector([START_A(),32,CODE_B()])
+	== [107, 103, 32, 100, 26, 106, 107],  "compute_bitmap_vector test 12");
+do_assert(compute_bitmap_vector([START_A(),32,CODE_C()])
+	== [107, 103, 32, 99, 24, 106, 107],   "compute_bitmap_vector test 13");
+do_assert(compute_bitmap_vector([START_B(),32,CODE_A()])
+	== [107, 104, 32, 101, 29, 106, 107],  "compute_bitmap_vector test 14");
+do_assert(compute_bitmap_vector([START_B(),32,CODE_B()])
+	== [107, 104, 32, 100, 27, 106, 107],  "compute_bitmap_vector test 15");
+do_assert(compute_bitmap_vector([START_B(),32,CODE_C()])
+	== [107, 104, 32, 99, 25, 106, 107],   "compute_bitmap_vector test 16");
+do_assert(compute_bitmap_vector([START_C(),32,CODE_A()])
+	== [107, 105, 32, 101, 30, 106, 107],  "compute_bitmap_vector test 17");
+do_assert(compute_bitmap_vector([START_C(),32,CODE_B()])
+	== [107, 105, 32, 100, 28, 106, 107],  "compute_bitmap_vector test 18");
+do_assert(compute_bitmap_vector([START_C(),32,CODE_C()])
+	== [107, 105, 32, 99, 26, 106, 107],   "compute_bitmap_vector test 19");
+
+
+/*
+ * code_128_width - helper function to calculate the overall width of the
+ *   barcode
+ * Note: this includes the quiet area around the barcode
+ * Note: this does not account for large pullback values (normally the
+ * pullback should be negligable)
+ *
+ * codepoints - vector of codepoints to encode
+ *   see the API at the top of the file for the helper functions to generate
+ *   this vector
+ *
+ * expert_mode - only use this if you are an expert
+ */
+function code_128_width(codepoints, expert_mode=false) =
+	let(
+		c128_vec = (expert_mode)? codepoints: compute_bitmap_vector(codepoints),
+		module_vector = [
+			for (i=c128_vec)
+				for (j=symbol_vector[i]) j
+		]
+	)
+	len(module_vector)*STANDARD_SYMBOL_SCALE().x;
+
+/**** code_128_width() unit-tests ****/
+do_assert(
+	code_128_width(
+		concat(
+			cs128_b("RI"),
+			cs128_c([4,7,6,3,9,4,6,5,]),
+			cs128_b("2CH")
+		))
+	== 87.12,   "code_128_width test 00");
+do_assert(code_128_width(cs128_b("Wikipedia"))
+	== 76.23,   "code_128_width test 01");
+do_assert(code_128_width(cs128_a("PJJ123C"))
+	== 65.34,   "code_128_width test 02");
+do_assert(
+	code_128_width(
+		concat(
+			cs128_c([FNC1(), 4,2, 1,8, 4,0, 2,0, 5,0]),
+			cs128_a("0")
+		))
+	== 70.785,  "code_128_width test 03");
+do_assert(
+	code_128_width(
+		concat(
+			cs128_b("W"),
+			cs128_b("ikipedia", concatenating=true)
+		))
+	== 76.23,   "code_128_width test 04");
+do_assert(
+	code_128_width(
+		concat(
+			cs128_a("W"),
+			cs128_b("ikipedia")
+		))
+	== 81.675,  "code_128_width test 05");
+do_assert(
+	code_128_width(
+		concat(
+			cs128_b("Wiki"),
+			cs128_shift_a("P"),
+			cs128_b("edia", concatenating=true)
+		))
+	== 81.675,  "code_128_width test 06");
+do_assert(code_128_width(cs128_b("X00Y"))
+	== 49.005,  "code_128_width test 07");
+do_assert(
+	code_128_width(
+		concat(
+			cs128_b("X"),
+			cs128_c([0,0]),
+			cs128_b("Y")
+		))
+	== 54.45,   "code_128_width test 08");
+do_assert(
+	code_128_width(
+		cs128_a(
+			str(
+				"ABC", FNC4(), cs128_fnc4_high_helper("¡"), "!",
+				cs128_fnc4_high_helper(
+					str(FNC4(), FNC4(), "¢£¤¥Þ", FNC4())
+				), "^",
+				cs128_fnc4_high_helper("ÀÁÂÃ"), FNC4(), FNC4(), "XYZ"
+			)
+		))
+	== 157.905, "code_128_width test 09");
+do_assert(
+	code_128_width(
+		[QUIET(),START_A(),48,42,42,17,18,19,35,54,STOP(),QUIET()],
+		expert_mode=true)
+	== 65.34,   "code_128_width test 10");
+do_assert(code_128_width([1, 16, 33, 73, 99, 58], expert_mode=true)
+	== 32.67,   "code_128_width test 11");
+
+
 /*
  * code_128 - Generate a Code 128 / GS1-128 barcode
  *
@@ -484,30 +707,7 @@ module code_128(codepoints, bar=1, space=0, quiet_zone=0, pullback=-0.003,
 	if (!expert_mode)
 		do_assert(!start_check, "Code 128 does not begin with a valide START symbol");
 
-	//normalize the vector by replacing start symbols in the middle of the
-	//vector with switch symbols
-	norm_vec = (expert_mode)?
-		codepoints
-		:
-		[
-			for(i=[0:len(codepoints)-1])
-				(i>0 && codepoints[i]==START_A())? CODE_A():
-				(i>0 && codepoints[i]==START_B())? CODE_B():
-				(i>0 && codepoints[i]==START_C())? CODE_C():
-				codepoints[i]
-		];
-
-	//add the checkdigit and wrapping quiet zone and stop symbols
-	c128_vec = (expert_mode)?
-		codepoints
-		:
-		concat(
-			QUIET(),
-			[ for(i=norm_vec) i ],
-			calculate_checkdigit(norm_vec),
-			STOP(),
-			QUIET()
-		);
+	c128_vec = (expert_mode)? codepoints: compute_bitmap_vector(codepoints);
 
 	//replace the symbol numbers with the modules from symbol_vector
 	//and concatenates them together
@@ -520,7 +720,7 @@ module code_128(codepoints, bar=1, space=0, quiet_zone=0, pullback=-0.003,
 	];
 
 	//draw the resulting vector
-	scale([0.495, 12.7, 1])
+	scale(STANDARD_SYMBOL_SCALE())
 		1dbitmap(module_vector, pullback=pullback, vector_mode=vector_mode,
 			center=center);
 }
