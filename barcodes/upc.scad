@@ -29,7 +29,7 @@
  *
  * API:
  *   UPC_A(string, bar=1, space=0, quiet_zone=0, pullback=-0.003,
- *     vector_mode=false, font=Mono:Bold, fontsize=1.5)
+ *     vector_mode=false, center=false, font=Mono:Bold, fontsize=1.5)
  *     Generates the UPC-A barcode representing string.
  *     The bar, space, quiet_zone, and pullback parameters can be used to
  *     change the appearance of the barcode. A negative pullback will enlarge
@@ -37,11 +37,13 @@
  *     for more details.
  *     The vector_mode determines whether to create 2D vector artwork instead
  *     of 3D solid geometry. See notes/caveats in the bitmap library.
+ *     The center parameter works in the expected way to center the object at
+ *     the origin.
  *     The font and fontsize control the font used for drawing the text digits
  *     below each symbol.
  *
  *   EAN_13(string, bar=1, space=0, quiet_zone=0, pullback=-0.003,
- *     vector_mode=false, font=Mono:Bold, fontsize=1.5)
+ *     vector_mode=false, center=false, font=Mono:Bold, fontsize=1.5)
  *     Generates the EAN-13 barcode representing string.
  *     The bar, space, quiet_zone, and pullback parameters can be used to
  *     change the appearance of the barcode. A negative pullback will enlarge
@@ -49,13 +51,30 @@
  *     for more details.
  *     The vector_mode determines whether to create 2D vector artwork instead
  *     of 3D solid geometry. See notes/caveats in the bitmap library.
+ *     The center parameter works in the expected way to center the object at
+ *     the origin.
  *     The font and fontsize control the font used for drawing the text digits
  *     below each symbol.
+ *
+ *   UPC_A_width()
+ *     Reports the width of the UPC-A barcode.
+ *     These barcodes have a fixed width of 37.29 mm, but the function is
+ *     provided for completeness.
+ *
+ *   EAN_13_width()
+ *     Reports the width of the EAN-13 barcode.
+ *     These barcodes have a fixed width of 37.29 mm, but the function is
+ *     provided for completeness.
  *
  *****************************************************************************/
 use <../util/compat.scad>
 use <../util/bitmap.scad>
 use <../util/stringlib.scad>
+
+/* define standard scale factors */
+SYMBOL_FULL_HEIGHT = 24.5;
+SYMBOL_PARTIAL_HEIGHT = 22.85;
+MODULE_WIDTH = 0.33;
 
 /*
  * symbol definitions arranged in a convenient array
@@ -134,6 +153,7 @@ function upc_symbol_len(symbol) =
  * bar - bar representation
  * space - space representation
  * quiet_zone - representation for quiet zone
+ * center - indicate whether the symbol should be centered on the origin
  * pullback - reduce each unit size by this amount
  * (see documentation in bitmap.scad)
  *
@@ -142,6 +162,7 @@ function upc_symbol_len(symbol) =
  * reverse - true to mirror the symbol (EAN use)
  */
 module upc_symbol(symbol, bar=1, space=0, quiet_zone=0,
+	center=false,
 	pullback=-0.003,
 	vector_mode=false,
 	parity=true, reverse=false)
@@ -158,7 +179,7 @@ module upc_symbol(symbol, bar=1, space=0, quiet_zone=0,
 				(symbol_vector[symbol][index])?B:S
 	];
 
-	1dbitmap(vector, pullback=pullback, vector_mode=vector_mode);
+	1dbitmap(vector, center=center, pullback=pullback, vector_mode=vector_mode);
 }
 
 /*
@@ -199,6 +220,7 @@ function calculate_checkdigit(digits, symbol_length, i=-1) =
  * (see documentation in bitmap.scad)
  *
  * vector_mode - create a 2D vector drawing instead of 3D extrusion
+ * center - indicate whether the barcode should be centered on the origin
  * font - font to use for decimal digits below each symbol
  *   set to undef if you do not want any text
  * fontsize - font size to use
@@ -207,6 +229,7 @@ module UPC_base(digits, mode,
 	bar=1, space=0, quiet_zone=0,
 	pullback=-0.003,
 	vector_mode=false,
+	center=false,
 	font="Liberation Mono:style=Bold", fontsize=1.5)
 {
 	symbol_length = (mode==0)?12:13;
@@ -238,9 +261,9 @@ module UPC_base(digits, mode,
 	//symbol in position i
 	//i ranges from 0 to 16
 	function get_height(i) =
-		(i<(15-symbol_length))?24.5:
-		(i==8)?24.5:
-		(i>(symbol_length+1))?24.5: 22.85;
+		(i<(15-symbol_length))?SYMBOL_FULL_HEIGHT:
+		(i==8)?SYMBOL_FULL_HEIGHT:
+		(i>(symbol_length+1))?SYMBOL_FULL_HEIGHT: SYMBOL_PARTIAL_HEIGHT;
 
 	//returns whether odd or even parity should
 	//be used for the symbol in position i
@@ -284,16 +307,27 @@ module UPC_base(digits, mode,
 	//along the x-axis
 	module draw_symbol(digits, checkdigit,
 		bar=1, space=0, quiet_zone=0,
+		center=false,
 		pullback=pullback,
 		vector_mode=vector_mode,
 		x=0, i=0)
 	{
-		translate([0,24.5-get_height(i),0])
-			scale([0.33, get_height(i), 1])
-				translate([x,0,0])
+		// calculate the offsets for centering
+		// note that this "undoes" the x/y centering from 1dbitmap (leaving only he z-height
+		// centering from that function)
+		// we want the overall x/y centering to be done in the outer caller of UPC_base
+		// in principle, this function doesn't know how wide the full symbol is
+		increment = upc_symbol_len(get_symbol(digits,checkdigit,i));
+		xoffset = (center)? increment/2: 0;
+		yoffset = (center)? 0.5: 0;
+
+		translate([0,SYMBOL_FULL_HEIGHT-get_height(i),0])
+			scale([MODULE_WIDTH, get_height(i), 1])
+				translate([x+xoffset,yoffset])
 					upc_symbol(
 						symbol=get_symbol(digits,checkdigit,i),
 						bar=bar, space=space, quiet_zone=quiet_zone,
+						center=center,
 						pullback=pullback,
 						vector_mode=vector_mode,
 						parity=get_parity(digits, i),
@@ -301,9 +335,10 @@ module UPC_base(digits, mode,
 		if (i<16)
 			draw_symbol(digits, checkdigit,
 				bar, space, quiet_zone,
+				center,
 				pullback,
 				vector_mode,
-				x+upc_symbol_len(get_symbol(digits,checkdigit,i)),
+				x+increment,
 				i+1);
 	}
 
@@ -312,7 +347,7 @@ module UPC_base(digits, mode,
 	//or from 0 to 13 (EAN-13)
 	function get_text_pos(i) = (mode==0)? (
 	[
-		0.33*(
+		MODULE_WIDTH*(
 			(i==0)?0:
 			(i<6)?(
 				upc_symbol_len(10)+upc_symbol_len(11)+
@@ -335,7 +370,7 @@ module UPC_base(digits, mode,
 	]
 	) : (
 	[
-		0.33*(
+		MODULE_WIDTH*(
 			(i==0)?upc_symbol_len(13)-upc_symbol_len(14):
 			(i<7)?(
 				upc_symbol_len(13)+upc_symbol_len(11)+
@@ -378,12 +413,12 @@ module UPC_base(digits, mode,
 				font, fontsize, i+1);
 	}
 
-	module extrude_text(vector_mode, height)
+	module extrude_text(vector_mode, height, center=false)
 	{
 		if (vector_mode)
 			children();
 		else
-			linear_extrude(height)
+			linear_extrude(height, center=center)
 				children();
 	}
 
@@ -391,18 +426,33 @@ module UPC_base(digits, mode,
 	//invoke the modules to draw the actual symbol
 	draw_symbol(digits, checkdigit,
 		bar=bar, space=space, quiet_zone=quiet_zone,
+		center=center,
 		pullback=pullback,
 		vector_mode=vector_mode);
 	if (font)
 		if (is_indexable(bar))
-			color(bar) extrude_text(vector_mode, 1)
+			color(bar) extrude_text(vector_mode, 1, center)
 				draw_text(digits, checkdigit, draw_quiet_arrow,
 					font, fontsize);
 		else
-			extrude_text(vector_mode, clamp_nonnum(bar))
+			extrude_text(vector_mode, clamp_nonnum(bar), center)
 				draw_text(digits, checkdigit, draw_quiet_arrow,
 					font, fontsize);
 }
+
+
+/*
+ * UPC_A_width - Return the width of the UPC-A barcode
+ *   Note: this barcode has a fixed width of 37.29 mm,
+ *   but the function is provided for completeness.
+ */
+function UPC_A_width() =
+	(
+		12 * upc_symbol_len(0)  +
+		2  * upc_symbol_len(10) +
+		2  * upc_symbol_len(11) +
+		1  * upc_symbol_len(12)
+	) * MODULE_WIDTH;
 
 
 /*
@@ -418,6 +468,7 @@ module UPC_base(digits, mode,
  * (see documentation in bitmap.scad)
  *
  * vector_mode - create a 2D vector drawing instead of 3D extrusion
+ * center - indicate whether the barcode should be centered on the origin
  * font - font to use for decimal digits below each symbol
  *   set to undef if you do not want any text
  * fontsize - font size to use
@@ -425,18 +476,38 @@ module UPC_base(digits, mode,
 module UPC_A(string, bar=1, space=0, quiet_zone=0,
 	pullback=-0.003,
 	vector_mode=false,
+	center=false,
 	font="Liberation Mono:style=Bold", fontsize=1.5)
 {
 	digits = atoi(string);
 	do_assert((len(digits)==(11)) || (len(digits)==12),
 		"UPC string must be exactly 11 or 12 digits");
 
+	offset = (center)? -0.5*[UPC_A_width(),SYMBOL_FULL_HEIGHT]: [0,0];
+
+	translate(offset)
 	UPC_base(digits, mode=0,
 		bar=bar, space=space, quiet_zone=quiet_zone,
 		pullback=pullback,
 		vector_mode=vector_mode,
+		center=center,
 		font=font, fontsize=fontsize);
 }
+
+/*
+ * EAN_13_width - Return the width of the EAN-13 barcode
+ *   Note: this barcode has a fixed width of 37.29 mm,
+ *   but the function is provided for completeness.
+ */
+function EAN_13_width() =
+	(
+		12 * upc_symbol_len(0)  +
+		2  * upc_symbol_len(11) +
+		1  * upc_symbol_len(12) +
+		1  * upc_symbol_len(13) +
+		1  * upc_symbol_len(14)
+	) * MODULE_WIDTH;
+
 
 /*
  * EAN_13 - Generate an EAN-13 barcode
@@ -452,6 +523,7 @@ module UPC_A(string, bar=1, space=0, quiet_zone=0,
  * (see documentation in bitmap.scad)
  *
  * vector_mode - create a 2D vector drawing instead of 3D extrusion
+ * center - indicate whether the barcode should be centered on the origin
  * font - font to use for decimal digits below each symbol
  *   set to undef if you do not want any text
  * fontsize - font size to use
@@ -459,6 +531,7 @@ module UPC_A(string, bar=1, space=0, quiet_zone=0,
 module EAN_13(string, bar=1, space=0, quiet_zone=0,
 	pullback=-0.003,
 	vector_mode=false,
+	center=false,
 	font="Liberation Mono:style=Bold", fontsize=1.5)
 {
 	digits = atoi(string);
@@ -466,10 +539,14 @@ module EAN_13(string, bar=1, space=0, quiet_zone=0,
 	do_assert((len(digits)==12) || (len(digits)==13),
 		"GTIN string must be exactly 12 or 13 digits");
 
+	offset = (center)? -0.5*[EAN_13_width(),SYMBOL_FULL_HEIGHT]: [0,0];
+
+	translate(offset)
 	UPC_base(digits, mode=(draw_quiet_arrow)?2:1,
 		bar=bar, space=space, quiet_zone=quiet_zone,
 		pullback=pullback,
 		vector_mode=vector_mode,
+		center=center,
 		font=font, fontsize=fontsize);
 }
 
@@ -478,6 +555,7 @@ module EAN_13(string, bar=1, space=0, quiet_zone=0,
 //UPC_A("333333333331", bar="blue", font=undef);
 //UPC_A("33333333333", bar="black"); //checkdigit 1
 //UPC_A("03600029145", bar="black"); //checkdigit 2
+//UPC_A("036000291452", bar=3, quiet_zone=[.2,.2,.2,.4], center=true);
 //UPC_A("04210000526", bar="black"); //checkdigit 4
 //UPC_A("12345678901", bar="black"); //checkdigit 2
 //UPC_A("01234554321", bar="black"); //checkdigit 0
@@ -490,6 +568,7 @@ module EAN_13(string, bar=1, space=0, quiet_zone=0,
 //UPC_A("012345543210");
 
 EAN_13("5901234123457>", bar="black");
+//EAN_13("5901234123457>", bar=4, quiet_zone=[.2,.2,.2,.4], center=true);
 //EAN_13("871125300120", bar=true); //checkdigit 2
 //EAN_13("8711253001202", bar=false);
 //EAN_13("8711253001202", bar=0);
