@@ -27,6 +27,12 @@
  *     unit: specifies the width of a single bar unit (default: 1).
  *     text: "char" to show character under each symbol, "centered" to show
  *           entire code centered under barcode
+ *     center: specify whether to center the barcode on the origin
+ *             (default: false)
+ *
+ *   code39_width(code, unit)
+ *     code: code to be encoded (must be wrapped in *, e.x. "*ABC*")
+ *     unit: specifies the width of a single bar unit (default: 1).
  *
  *****************************************************************************/
 
@@ -190,6 +196,16 @@ module code39_symbol(char, height=10) {
 }
 
 /*
+ * Code 39 barcode width helper
+ *	Returns the width of the barcode (note: does not include the
+ *	final character separation space after the last character)
+ * Args:
+ *	code: string to encode (must be wrapped with "*")
+ *	unit: width of a single thin bar/space
+ */
+function code39_width(code, unit=1) = (len(code))*16*unit - 1;
+
+/*
  * Code 39 barcode
  * Args:
  *	code: string to encode (must be wrapped with "*")
@@ -198,9 +214,13 @@ module code39_symbol(char, height=10) {
  *	text: "char" to have each character printed under its respsctive symbol,
  *	      "centered" to have the whole string centered under the barcode
  */
-module code39(code, height=10, unit=1, text=false) {
+module code39(code, height=10, unit=1, text=false, center=false) {
+	offset=(center)?
+		[code39_width(code, unit)/2, height/2]:
+		[0,0];
+
 	for(i = [0:len(code)-1]) {
-		translate([i*16*unit, 0])
+		translate([i*16*unit, 0]-offset)
 			scale([unit, 1, 1])
 				code39_symbol(code[i], height=height);
 	}
@@ -208,17 +228,22 @@ module code39(code, height=10, unit=1, text=false) {
 	if(text == "char") {
 		for(i = [0:len(code)-1]) {
 			if(code[i] != "*")
-				translate([(i+0.5)*16*unit, -3])
+				translate([(i+0.5)*16*unit, -3]-offset)
 					text(code[i], font="Courier New:style=Bold",
 						 halign="center", valign="top", size=text_size);
 		}
 	} else if(text == "centered") {
-		translate([len(code)*16*unit/2, -3])
+		translate([len(code)*16*unit/2, -3]-offset)
 			text(strip_marker(code), font="Courier New:style=Bold",
 				 halign="center", valign="top", size=text_size);
 	}
 }
 
+/* examples */
+//color("black")
+//code39("*ABCDEFG$/+%*", height=40, text="centered")
+
 color("black")
-code39("*ABCDEFG$/+%*", height=40, text="centered");
+	linear_extrude(3, center=true)
+		code39("*A %*", height=40, unit=2, text="char", center=true);
 

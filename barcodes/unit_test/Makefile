@@ -8,6 +8,7 @@ UPCA_testcases:=$(wildcard upca_*.scad)
 EAN13_testcases:=$(wildcard ean13_*.scad)
 UPC_testcases=$(UPCA_testcases) $(EAN13_testcases)
 CODE128_testcases=$(wildcard code128_*.scad)
+CODE39_testcases=$(wildcard code39_*.scad)
 
 
 define expand_png_list
@@ -22,7 +23,7 @@ clean:
 	rm -f $(RESULTDIR)/*.png
 	rm -f $(TMPDIR)/*.d
 
-.PHONY: upc upca ean13 code128
+.PHONY: upc upca ean13 code128 code39
 upc: $(call expand_png_list, $(UPC_testcases))
 
 upca: $(call expand_png_list, $(UPCA_testcases))
@@ -30,6 +31,8 @@ upca: $(call expand_png_list, $(UPCA_testcases))
 ean13: $(call expand_png_list, $(EAN13_testcases))
 
 code128: $(call expand_png_list, $(CODE128_testcases))
+
+code39: $(call expand_png_list, $(CODE39_testcases))
 
 
 # include generated dependency files
