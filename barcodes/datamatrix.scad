@@ -105,7 +105,8 @@ function frobulate(vec, frob_digits=true, i=0) =
 			inc=frob_digits?
 				(
 					//check for digit pairs
-					((vec[i]>=48)&&(vec[i]<=57) &&
+					((len(vec)>(i+1)) &&
+					 (vec[i]>=48)&&(vec[i]<=57) &&
 					 (vec[i+1]>=48)&&(vec[i+1]<=57))?2:1
 				):1,
 			val=(inc==2)?
@@ -113,6 +114,7 @@ function frobulate(vec, frob_digits=true, i=0) =
 				vec[i]+1
 		)
 		concat(val, frobulate(vec, frob_digits, i+inc));
+
 /*
  * dm_ascii - convert ASCII string to byte vector encoded in
  *   DataMatrix ASCII mode
