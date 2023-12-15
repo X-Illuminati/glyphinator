@@ -2,7 +2,9 @@
 OpenSCAD Barcode Generator - useful for direct part marking on 3D models  
 https://github.com/X-Illuminati/glyphinator/
 
-## Usage
+---
+
+## Usage Examples
 Supported barcodes:
 * UPC-A
 * EAN-13
@@ -12,8 +14,9 @@ Supported barcodes:
 * Quick Response 2D barcodes
 
 ### UPC-A
-Include upc.scad in your model with the use command.
-See the documentation in [upc.scad](barcodes/upc.scad) for more details.
+Include upc.scad in your model with the `use` command.  
+See the [UPC/EAN user-guide](doc/upc.md) for more details.
+
 ```
 use <barcodes/upc.scad>
 UPC_A("01234554321");
@@ -23,8 +26,9 @@ UPC_A("01234554321");
 ![UPC-A Example](doc/upc_a-example2.png)
 
 ### EAN-13
-Include upc.scad in your model with the use command.
-See the documentation in [upc.scad](barcodes/upc.scad) for more details.
+Include upc.scad in your model with the `use` command.  
+See the [UPC/EAN user-guide](doc/upc.md) for more details.
+
 ```
 use <barcodes/upc.scad>
 EAN_13("012345678901>");
@@ -34,8 +38,9 @@ EAN_13("012345678901>");
 ![EAN_13 Example](doc/ean_13-example2.png)
 
 ### Code 39
-Include code39.scad in your model with the use command.
+Include code39.scad in your model with the `use` command.  
 See the documentation in [code39.scad](barcodes/code39.scad) for more details.
+
 ```
 use <barcodes/code39.scad>
 code39("*A-123*", height=40, text="centered");
@@ -45,8 +50,9 @@ code39("*A-123*", height=40, text="centered");
 ![Code 39 Example](doc/code39-example2.png)
 
 ### Code 128
-Include code128.scad in your model with the use command.
+Include code128.scad in your model with the `use` command.  
 See the documentation in [code128.scad](barcodes/code128.scad) for more details.
+
 ```
 use <barcodes/code128.scad>
 code_128(cs128_c([1,2,3,4]));
@@ -56,9 +62,10 @@ code_128(cs128_c([1,2,3,4]));
 ![Code 128 Example](doc/code_128-example2.png)
 
 ### DataMatrix
-Include datamatrix.scad in your model with the use command.
+Include datamatrix.scad in your model with the `use` command.  
 See the documentation in [datamatrix.scad](barcodes/datamatrix.scad) for more
 details.
+
 ```
 use <barcodes/datamatrix.scad>
 data_matrix(dm_ascii("1234"));
@@ -68,9 +75,10 @@ data_matrix(dm_ascii("1234"));
 ![DataMatrix Example](doc/datamatrix-example2.png)
 
 ### Quick Response
-Include quick_response.scad in your model with the use command.
+Include quick_response.scad in your model with the `use` command.  
 See the documentation in [quick_response.scad](barcodes/quick_response.scad)
 for more details.
+
 ```
 use <barcodes/quick_response.scad>
 quick_response(qr_numeric([0,1,2,3,4,5,6,7,8,9]));
@@ -83,7 +91,11 @@ quick_response(qr_numeric([0,1,2,3,4,5,6,7,8,9]));
 OpenSCAD can generate 2D vector graphics with a few caveats.
 To generate any of the barcodes using 2D vector geometry rather than 3D solid
 geometry, simply add `vector_mode=true` to the barcode module parameters.
-Note: not currently supported by Code 39 implementation.
+
+> 🪧 Note: The Code 39 implementation generates vectors by default.
+> Use the linear_extrude command to expand these into 3D objects.
+
+---
 
 ## Software License
 Glyphinator is free software: you can redistribute it and/or modify
