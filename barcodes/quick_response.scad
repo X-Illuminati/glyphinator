@@ -33,7 +33,7 @@
  * API:
  *   quick_response(bytes, ecc_level=2, mask=0, version=undef
  *                  mark=1, space=0, quiet_zone=0, pullback=0.003,
- *                  vector_mode=false, expert_mode=false)
+ *                  vector_mode=false, center=false, expert_mode=false)
  *     Generates a quick-response-style symbol with contents specified by the
  *     bytes array and selectable ecc_level and mask pattern.
  *     See "ECC Levels" and "Mask Patterns" below for more details.
@@ -44,7 +44,19 @@
  *     for more details.
  *     The vector_mode flag determines whether to create 2D vector artwork
  *     instead of 3D solid geometry. See notes/caveats in the bitmap library.
+ *     The center flag indicates whether to center the symbol on the origin.
  *     The expert_mode flag should only be used by experts.
+ *
+ *   quick_response_size(bytes, ecc_level=2, version=undef, expert_mode=false)
+ *     Calculates the dimensions of the Quick Response symbol needed to encode
+ *     the supplied vector of data bytes. This returned value is a 2-vector
+ *     (e.g. [49, 49]) that includes the quiet zone around the symbol.
+ *     The bytes array should be the same as would be passed to the
+ *     quick_response module. (That is, it should be generated using the
+ *     helper functions below.)
+ *     Likewise, ecc_level should be set to the same value (see "ECC Levels"
+ *     below).
+ *     The symbol version can be supplied explicitly, if desired.
  *
  *   qr_bytes(data)
  *     Encode the data byte vector as a quick response byte/binary TLV
@@ -170,6 +182,42 @@ function qr_alphanum(string) = (len(string)==undef)?undef:
 		);
 
 /*
+ * quick_response_size - Compute the size of a Quick Response symbol including
+ *                       the quiet zone
+ * Note: does not account for large pullback values. Normally, these should be
+ * negligible.
+ *
+ * bytes - vector of data bytes that would be used with the quick_response
+ *         module
+ *
+ * ecc_level - determines ratio of ecc:data bytes
+ *   0=Low, 1=Mid, 2=Quality, 3=High
+ *
+ * version - specify symbol version explicitly
+ * expert_mode - only use this if you are an expert
+ */
+function quick_response_size(bytes, ecc_level=2, version=undef,
+	expert_mode=false) =
+	let(
+		//determining the symbol version to use is somewhat tricky
+		//here due to various combinations of expert_mode and
+		//explicitly supplied version
+		//pre_pad_bytes is only used for the case where neither of
+		//these are set and we need to auto-detect the version
+		pre_pad_bytes = (!expert_mode && (version==undef))?
+			qr_pad(bytes, ecc_level=ecc_level):
+			undef,
+		props = (expert_mode)?
+			qr_get_props_by_total_size(len(bytes)):
+			(version==undef)?
+				qr_get_props_by_data_size(len(pre_pad_bytes), ecc_level):
+				qr_get_props_by_version(version),
+		dims=qr_prop_dimension(props)
+	)
+	//add 8 to the result to include the 2 quiet zones on each side
+	[dims+8, dims+8];
+
+/*
  * quick_response - Generate a Quick Response symbol
  *
  * bytes - data bytes to encode
@@ -194,12 +242,14 @@ function qr_alphanum(string) = (len(string)==undef)?undef:
  *   (see documentation in bitmap.scad)
  *
  * vector_mode - create a 2D vector drawing instead of 3D extrusion
+ * center - indicates whether the symbol should be centered on the origin
  * expert_mode - only use this if you are an expert
  * debug - number of codewords to render
  */
 module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 	mark=1, space=0, quiet_zone=0, pullback=0.003,
 	vector_mode=false,
+	center=false,
 	expert_mode=false, debug=undef)
 {
 	if ((version!=undef) && (version<1 || version>40))
@@ -212,8 +262,20 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 	if (version && version>6)
 		echo(str("WARNING: version ", version, " is not implemented"));
 
+	//Note: throughout the code, where 2dbitmap is used, the center parameter
+	//is passed to it in order to get the correct z-height centering.
+	//However, it would be a challenge to further center each codeword in the
+	//x and y direction since this would depend on the symbol size.
+	//Instead, it is easier to adjust each bitmap by [cw.x/2, cw.y/2] to
+	//bring it back to its original, non-centered position and then shift
+	//the entire barcode at the end by [dims.x/2, dims.y/2].
+	//This helper function is used to translate the results of 2dbitmap
+	//to cancel the x/y centering and leave only the z centering.
+	//When center=false it returns [0,0] to have no effect.
+	function offs(o) = center?o:[0,0];
+
 	//determining the symbol version to use is somewhat tricky
-	//here do to various combinations of expert_mode and
+	//here due to various combinations of expert_mode and
 	//explicitly supplied version
 	//pre_pad_bytes is only used for the case where neither of
 	//these are set and we need to auto-detect the version
@@ -474,8 +536,10 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 						undef
 				]
 			];
-		translate([x,y])
-			2dbitmap(cooked, pullback=pullback, vector_mode=vector_mode);
+		o=[len(cooked[0])/2,len(cooked)/2];
+		translate([x,y]+offs(o))
+			2dbitmap(cooked, pullback=pullback, vector_mode=vector_mode,
+				center=center);
 	}
 
 	//draw individual codewords from bytes array
@@ -584,7 +648,7 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 				format_info[n]?mark:space;
 
 		//format chunk 1
-		translate([8,dims-6])
+		translate([8,dims-6]+offs([0.5,3]))
 			2dbitmap(
 				[
 					[fi(0)],
@@ -594,35 +658,35 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 					[fi(4)],
 					[fi(5)]
 				],
-				pullback=pullback, vector_mode=vector_mode);
+				pullback=pullback, vector_mode=vector_mode, center=center);
 
 		//format chunk 2
-		translate([7,dims-9])
+		translate([7,dims-9]+offs([1,1]))
 			2dbitmap(
 				[
 					[undef,fi(6)],
 					[fi(8),fi(7)]
 				],
-				pullback=pullback, vector_mode=vector_mode);
+				pullback=pullback, vector_mode=vector_mode, center=center);
 
 		//format chunk 3
-		translate([0,dims-9])
+		translate([0,dims-9]+offs([3,0.5]))
 			2dbitmap(
 				[
 					[fi(14),fi(13),fi(12),fi(11),fi(10),fi(9)]
 				],
-				pullback=pullback, vector_mode=vector_mode);
+				pullback=pullback, vector_mode=vector_mode, center=center);
 
 		//format chunk 4
-		translate([dims-8,dims-9])
+		translate([dims-8,dims-9]+offs([4,0.5]))
 			2dbitmap(
 				[
 					[fi(7),fi(6),fi(5),fi(4),fi(3),fi(2),fi(1),fi(0)]
 				],
-				pullback=pullback, vector_mode=vector_mode);
+				pullback=pullback, vector_mode=vector_mode, center=center);
 
 		//format chunk 5
-		translate([8,0])
+		translate([8,0]+offs([0.5,4]))
 			2dbitmap(
 				[
 					[mark],
@@ -634,70 +698,71 @@ module quick_response(bytes, ecc_level=2, mask=0, version=undef,
 					[fi(13)],
 					[fi(14)]
 				],
-				pullback=pullback, vector_mode=vector_mode);
+				pullback=pullback, vector_mode=vector_mode, center=center);
 	}
 
-	//draw the symbol
-	translate([4,4])
+	//draw the symbol (and center in the x/y plane if requested)
+	translate([4,4]+offs([-dims/2-4, -dims/2-4]))
 	{
 		//draw the data region
 		quick_response_inner(data_bytes, x=dims-2);
 
 		//draw the finder patterns
-		2dbitmap(finder(mark, space), pullback=pullback,
-			vector_mode=vector_mode);
-		translate([0,7])
-			2dbitmap([[for (i=[0:7]) space]], pullback=pullback,
-				vector_mode=vector_mode);
-		translate([7,0])
-			2dbitmap([for (i=[0:6]) [space]], pullback=pullback,
-				vector_mode=vector_mode);
-		translate([0,dims-7])
+		translate(offs([7/2,7/2]))
 			2dbitmap(finder(mark, space), pullback=pullback,
-				vector_mode=vector_mode);
-		translate([0,dims-8])
+				vector_mode=vector_mode, center=center);
+		translate([0,7]+offs([4,0.5]))
 			2dbitmap([[for (i=[0:7]) space]], pullback=pullback,
-				vector_mode=vector_mode);
-		translate([7,dims-7])
+				vector_mode=vector_mode,center=center);
+		translate([7,0]+offs([0.5,7/2]))
 			2dbitmap([for (i=[0:6]) [space]], pullback=pullback,
-				vector_mode=vector_mode);
-		translate([dims-7,dims-7])
+				vector_mode=vector_mode, center=center);
+		translate([0,dims-7]+offs([7/2,7/2]))
 			2dbitmap(finder(mark, space), pullback=pullback,
-				vector_mode=vector_mode);
-		translate([dims-8,dims-8])
+				vector_mode=vector_mode, center=center);
+		translate([0,dims-8]+offs([4,0.5]))
 			2dbitmap([[for (i=[0:7]) space]], pullback=pullback,
-				vector_mode=vector_mode);
-		translate([dims-8,dims-7])
+				vector_mode=vector_mode, center=center);
+		translate([7,dims-7]+offs([0.5,7/2]))
 			2dbitmap([for (i=[0:6]) [space]], pullback=pullback,
-				vector_mode=vector_mode);
+				vector_mode=vector_mode, center=center);
+		translate([dims-7,dims-7]+offs([7/2,7/2]))
+			2dbitmap(finder(mark, space), pullback=pullback,
+				vector_mode=vector_mode, center=center);
+		translate([dims-8,dims-8]+offs([4,0.5]))
+			2dbitmap([[for (i=[0:7]) space]], pullback=pullback,
+				vector_mode=vector_mode, center=center);
+		translate([dims-8,dims-7]+offs([0.5,7/2]))
+			2dbitmap([for (i=[0:6]) [space]], pullback=pullback,
+				vector_mode=vector_mode, center=center);
 
 		//draw the clock track
-		translate([6,8])
+		translate([6,8]+offs([0.5,(dims-16)/2]))
 			2dbitmap([for (i=[0:dims-17]) [(i%2)?space:mark]],
-				pullback=pullback, vector_mode=vector_mode);
-		translate([8,dims-7])
+				pullback=pullback, vector_mode=vector_mode, center=center);
+		translate([8,dims-7]+offs([(dims-16)/2,0.5]))
 			2dbitmap([[for (i=[0:dims-17]) (i%2)?space:mark]],
-				pullback=pullback, vector_mode=vector_mode);
+				pullback=pullback, vector_mode=vector_mode, center=center);
 
 		//draw the alignment pattern
 		if (align_count)
-			translate([dims-9,4])
+			translate([dims-9,4]+offs([5/2,5/2]))
 				2dbitmap(alignment(mark, space), pullback=pullback,
-					vector_mode=vector_mode);
+					vector_mode=vector_mode, center=center);
 
 		//draw the quiet zone
-		translate([0,dims])
+		translate([0,dims]+offs([dims/2,2]))
 			2dbitmap([for (i=[0:3]) [for (j=[0:dims-1]) quiet_zone]],
-				vector_mode=vector_mode);
-		translate([-4,-4])
+				vector_mode=vector_mode, center=center);
+		translate([-4,-4]+offs([2,dims/2+4]))
 			2dbitmap([for (i=[0:dims+7]) [for (j=[0:3]) quiet_zone]],
-				vector_mode=vector_mode);
-		translate([0,-4])
+				vector_mode=vector_mode, center=center);
+		translate([0,-4]+offs([dims/2,2]))
 			2dbitmap([for (i=[0:3]) [for (j=[0:dims-1]) quiet_zone]],
-				vector_mode=vector_mode);
-		translate([dims,-4])
+				vector_mode=vector_mode, center=center);
+		translate([dims,-4]+offs([2,dims/2+4]))
 			2dbitmap([for (i=[0:dims+7]) [for (j=[0:3]) quiet_zone]],
-				vector_mode=vector_mode);
+				vector_mode=vector_mode, center=center);
 
 		//draw the format patterns
 		format_patterns();
