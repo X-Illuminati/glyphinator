@@ -74,7 +74,7 @@ supplied parameters.
 * `space`: representation unit for spaces in the symbol
   - defaults to 0, which generates no geometry
   - can also usefully be set to "white" to generate white fill between bars
-* `quiet_zone`: representation unit for the quient zone around the symbol
+* `quiet_zone`: representation unit for the quiet zone around the symbol
   - defaults to 0, which generates no geometry
   - can also usefully be set to "white" to generate white fill on both sides of the symbol
 * `pullback`: a factor to apply to the individual modules of the symbol
