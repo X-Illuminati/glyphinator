@@ -21,7 +21,6 @@ See the [UPC/EAN user-guide](doc/upc.md) for more details.
 use <barcodes/upc.scad>
 UPC_A("01234554321");
 ```
-
 ![UPC-A Example](doc/upc_a-example.png)
 ![UPC-A Example](doc/upc_a-example2.png)
 
@@ -33,19 +32,17 @@ See the [UPC/EAN user-guide](doc/upc.md) for more details.
 use <barcodes/upc.scad>
 EAN_13("012345678901>");
 ```
-
 ![EAN-13 Example](doc/ean_13-example.png)
 ![EAN_13 Example](doc/ean_13-example2.png)
 
 ### Code 39
 Include code39.scad in your model with the `use` command.  
-See the documentation in [code39.scad](barcodes/code39.scad) for more details.
+See the [Code 39 user-guide](doc/code39.md) for more details.
 
 ```
 use <barcodes/code39.scad>
 code39("*A-123*", height=40, text="centered");
 ```
-
 ![Code 39 Example](doc/code39-example.png)
 ![Code 39 Example](doc/code39-example2.png)
 
