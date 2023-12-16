@@ -10,7 +10,7 @@ Supported barcodes:
 * EAN-13
 * Code 39
 * Code 128
-* DataMatrix (ECC200)
+* Data Matrix (ECC200)
 * Quick Response 2D barcodes
 
 ### UPC-A
@@ -57,18 +57,16 @@ code_128(cs128_c([1,2,3,4]));
 ![Code 128 Example](doc/code_128-example.png)
 ![Code 128 Example](doc/code_128-example2.png)
 
-### DataMatrix
+### Data Matrix
 Include datamatrix.scad in your model with the `use` command.  
-See the documentation in [datamatrix.scad](barcodes/datamatrix.scad) for more
-details.
+See the [Data Matrix user-guide](doc/datamatrix.md) for more details.
 
 ```
 use <barcodes/datamatrix.scad>
 data_matrix(dm_ascii("1234"));
 ```
-
-![DataMatrix Example](doc/datamatrix-example.png)
-![DataMatrix Example](doc/datamatrix-example2.png)
+![Data Matrix Example](doc/datamatrix-example.png)
+![Data Matrix Example](doc/datamatrix-example2.png)
 
 ### Quick Response
 Include quick_response.scad in your model with the `use` command.  

@@ -11,4 +11,4 @@ use <barcodes/datamatrix.scad>
 data_matrix(dm_ascii("https://github.com/X-Illuminati/glyphinator/"), mark="black");
 
 /* more compact version */
-//data_matrix(concat(text_mode(),dm_text("https://github.com/X-Illuminati/glyphinato"),dm_ascii("r")), mark="black");
+//data_matrix(concat(text_mode(),dm_text("https://github.com/X-Illuminati/glyphinato"),ascii_mode(),dm_ascii("r")), mark="black");
