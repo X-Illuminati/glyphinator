@@ -341,8 +341,7 @@ function cs128_c_helper(digits, i=0) =
 	(digits[i]==10 && digits[i+1]==2)?
 		concat(102, cs128_c_helper(digits, i+2)):
 	// normal case, pair digits
-	((i+1)<len(digits) && isa_num(digits[i]) && isa_num(digits[i+1]) &&
-	 (digits[i]<10 && digits[i]>=0) && (digits[i+1]<10 && digits[i+1]>=0))?
+	((i+1)<len(digits) && isa_digit(digits[i]) && isa_digit(digits[i+1]))?
 		concat(digits[i]*10+digits[i+1], cs128_c_helper(digits, i+2)):
 	// else case, skip current invalid or unpaired digit
 	cs128_c_helper(digits, i+1);
@@ -367,6 +366,23 @@ do_assert(cs128_c([1,3,10,2,4])       == [105,13,102],    "cs128_c test 13");
 do_assert(cs128_c([7,10,2,2,1])       == [105,102,21],    "cs128_c test 14");
 do_assert(cs128_c([7,10,2,4])         == [105,102],       "cs128_c test 15");
 do_assert(cs128_c([7,10,2,10,2,4])    == [105,102,102],   "cs128_c test 16");
+do_assert(cs128_c([1,3,10,3,2,1])     == [105,13,32],     "cs128_c test 17");
+do_assert(cs128_c([1,3,11,2,2,1])     == [105,13,22],     "cs128_c test 18");
+do_assert(cs128_c([1,3,11,17,2,1])    == [105,13,21],     "cs128_c test 19");
+do_assert(cs128_c([1,3,11,2,10,2,2,1]) == [105,13,102,21],
+	"cs128_c test 20");
+do_assert(cs128_c([1,3,1.5,2,2,1])    == [105,13,22],     "cs128_c test 21");
+do_assert(cs128_c([1,3,1.5,2.7,2,1])  == [105,13,21],     "cs128_c test 22");
+do_assert(cs128_c([1,3,1.5,2,10,2,2,1]) == [105,13,102,21],
+	"cs128_c test 23");
+do_assert(cs128_c([1,3,-1,2,2,1])     == [105,13,22],     "cs128_c test 24");
+do_assert(cs128_c([1,3,-1,-7,2,1])    == [105,13,21],     "cs128_c test 25");
+do_assert(cs128_c([1,3,-1,2,10,2,2,1]) == [105,13,102,21],
+	"cs128_c test 26");
+do_assert(cs128_c([1,3,-1,0.5,false,"a",3,4]) == [105,13,34],
+	"cs128_c test 27");
+do_assert(cs128_c([1,3,9.1,2,1])      == [105,13,21],     "cs128_c test 28");
+do_assert(cs128_c([1,3,0.9,2,1])      == [105,13,21],     "cs128_c test 29");
 
 /*
  * cs128_shift_a - encode the ASCII character in Code Set 128A with prepended

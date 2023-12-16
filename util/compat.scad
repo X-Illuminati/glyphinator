@@ -30,6 +30,10 @@
  *   isa_num(arg)
  *     Tests the argument and returns true if it is a number.
  *
+ *   isa_digit(arg)
+ *     Tests the argument and returns true if it is an integer between 0 and 9
+ *     (inclusive).
+ *
  *   isa_string(arg)
  *     Tests the argument and returns true if it is a string.
  *
@@ -156,6 +160,47 @@ do_assert(isa_num("test")==false,      "isa_num test 11");
 do_assert(isa_num(true)==false,        "isa_num test 12");
 do_assert(isa_num(false)==false,       "isa_num test 13");
 do_assert(isa_num(undef)==false,       "isa_num test 14");
+
+
+/*
+ * isa_digit - determines whether the argument is a digit
+ *
+ * arg - the argument to check
+ */
+function isa_digit(arg) =
+	(isa_num(arg) && (arg<=9) && (arg>=0) && (round(arg)==arg));
+
+/* *** isa_digit() testcases *** */
+do_assert(isa_digit(0.1)==false,         "isa_digit test 00");
+do_assert(isa_digit(-1)==false,          "isa_digit test 01");
+do_assert(isa_digit(10)==false,          "isa_digit test 02");
+do_assert(isa_digit(+1/0)==false,        "isa_digit test 03"); //+inf
+do_assert(isa_digit(-1/0)==false,        "isa_digit test 04"); //-inf
+do_assert(isa_digit(0/0)==false,         "isa_digit test 05"); //nan
+do_assert(isa_digit((1/0)/(1/0))==false, "isa_digit test 06"); //nan
+do_assert(isa_digit([])==false,          "isa_digit test 07");
+do_assert(isa_digit([1])==false,         "isa_digit test 08");
+do_assert(isa_digit(["b"])==false,       "isa_digit test 09");
+do_assert(isa_digit("")==false,          "isa_digit test 10");
+do_assert(isa_digit("test")==false,      "isa_digit test 11");
+do_assert(isa_digit(true)==false,        "isa_digit test 12");
+do_assert(isa_digit(false)==false,       "isa_digit test 13");
+do_assert(isa_digit(undef)==false,       "isa_digit test 14");
+do_assert(isa_digit(0)==true,            "isa_digit test 15");
+do_assert(isa_digit(1)==true,            "isa_digit test 16");
+do_assert(isa_digit(2)==true,            "isa_digit test 17");
+do_assert(isa_digit(3)==true,            "isa_digit test 18");
+do_assert(isa_digit(4)==true,            "isa_digit test 19");
+do_assert(isa_digit(5)==true,            "isa_digit test 20");
+do_assert(isa_digit(6)==true,            "isa_digit test 21");
+do_assert(isa_digit(7)==true,            "isa_digit test 22");
+do_assert(isa_digit(8)==true,            "isa_digit test 23");
+do_assert(isa_digit(9)==true,            "isa_digit test 24");
+do_assert(isa_digit(-10)==false,         "isa_digit test 25");
+do_assert(isa_digit(9.999)==false,       "isa_digit test 26");
+do_assert(isa_digit(9.001)==false,       "isa_digit test 27");
+do_assert(isa_digit(0.999)==false,       "isa_digit test 28");
+do_assert(isa_digit(0.001)==false,       "isa_digit test 29");
 
 
 /*
