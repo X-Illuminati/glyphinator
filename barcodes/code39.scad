@@ -228,9 +228,9 @@ module code39(code, height=10, unit=1, text=false, center=false) {
 	if(text == "char") {
 		for(i = [0:len(code)-1]) {
 			if(code[i] != "*")
-				translate([(i+0.5)*16*unit, -3]-offset)
+				translate([(i+0.5)*16*unit, -text_size-1]-offset)
 					text(code[i], font="Courier New:style=Bold",
-						 halign="center", valign="top", size=text_size);
+						 halign="center", size=text_size);
 		}
 	} else if(text == "centered") {
 		translate([len(code)*16*unit/2, -3]-offset)
