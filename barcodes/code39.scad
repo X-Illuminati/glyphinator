@@ -203,7 +203,7 @@ module code39_symbol(char, height=10) {
  *	code: string to encode (must be wrapped with "*")
  *	unit: width of a single thin bar/space
  */
-function code39_width(code, unit=1) = (len(code))*16*unit - 1;
+function code39_width(code, unit=1) = ((len(code))*16 - 1)*unit;
 
 /*
  * Code 39 barcode
@@ -211,7 +211,7 @@ function code39_width(code, unit=1) = (len(code))*16*unit - 1;
  *	code: string to encode (must be wrapped with "*")
  *	height: height of the barcode
  *	unit: width of a single thin bar/space
- *	text: "char" to have each character printed under its respsctive symbol,
+ *	text: "char" to have each character printed under its respective symbol,
  *	      "centered" to have the whole string centered under the barcode
  */
 module code39(code, height=10, unit=1, text=false, center=false) {
@@ -246,4 +246,3 @@ module code39(code, height=10, unit=1, text=false, center=false) {
 color("black")
 	linear_extrude(3, center=true)
 		code39("*A %*", height=40, unit=2, text="char", center=true);
-
