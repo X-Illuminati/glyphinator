@@ -705,7 +705,7 @@ module code_128(codepoints, bar=1, space=0, quiet_zone=0, pullback=-0.003,
 		&& codepoints[0] != START_C();
 
 	if (!expert_mode)
-		do_assert(!start_check, "Code 128 does not begin with a valide START symbol");
+		do_assert(!start_check, "Code 128 does not begin with a valid START symbol");
 
 	c128_vec = (expert_mode)? codepoints: compute_bitmap_vector(codepoints);
 

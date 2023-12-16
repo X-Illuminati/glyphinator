@@ -48,13 +48,12 @@ code39("*A-123*", height=40, text="centered");
 
 ### Code 128
 Include code128.scad in your model with the `use` command.  
-See the documentation in [code128.scad](barcodes/code128.scad) for more details.
+See the [Code 128 user-guide](doc/code128.md) for more details.
 
 ```
 use <barcodes/code128.scad>
 code_128(cs128_c([1,2,3,4]));
 ```
-
 ![Code 128 Example](doc/code_128-example.png)
 ![Code 128 Example](doc/code_128-example2.png)
 
