@@ -15,6 +15,7 @@ like [bitmap.scad](../util/bitmap.scad) and [stringlib.scad](../util/stringlib.s
 * [Extended Examples](#extended-examples)
   - [Mixed Mode](#mixed-mode)
   - [Byte Mode](#byte-mode)
+  - [Mask](#mask)
   - [Rendering Options](#rendering-options)
   - [Vector Mode](#vector-mode)
 
@@ -185,7 +186,7 @@ quick_response(concat(qr_alphanum("ABCD"), qr_numeric([1,2,3,4])));
 ![Mixed-mode Example](quick_response-example4.png)  
 Note that the resulting concatenated vector is actually longer by a few bits in
 this example than the original. This isn't particularly surprising since we will
-have some over head from the type and length encoding of the second payload
+have some overhead from the type and length encoding of the second payload
 bitstream. In this case we are also using the Numeric mode inefficiently since
 we don't have a multiple of 3 digits.  
 It is not always clear what the best way to optimize a particular payload will
@@ -209,7 +210,35 @@ In this example, both lines generate identical symbols:
 quick_response(qr_bytes(ascii_to_vec("ABCD1234")));
 quick_response(qr_bytes([65, 66, 67, 68, 49, 50, 51, 52]));
 ```
-![Byte Mode Example](quick_response-example5.png)  
+![Byte Mode Example](quick_response-example5.png)
+
+### Mask
+The mask value provided to `quick_response` can be important for easy
+recognition of the symbol by optical scanners. Let's look at a few degenerate
+cases.
+
+For these examples, I will use the same code but change the `mask` parameter in
+each case. The data I'm encoding here is a long string of 0 bytes.
+```
+vec=qr_bytes([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]);
+quick_response(vec, mark="black", mask=0);
+```
+
+If we disable the mask entirely, we see that the large empty regions could make
+it difficult for a scanner to recognize precisely where to expect each codeword:  
+![No Mask Example](quick_response-mask8.png)
+
+If we use the default mask (0), we can see a different issue:  
+![Mask 0 Example](quick_response-mask0.png)  
+Here, it is very easy to lock onto the module edges, but there could be
+false-positive recognition for the alignment mark and the timing tracks.
+
+Likewise, we have similar issues with masks 1 and 2:  
+![Mask 1 Example](quick_response-mask1.png) ![Mask 2 Example](quick_response-mask2.png)
+
+Here are the remaining mask options:  
+![Mask 3 Example](quick_response-mask3.png) ![Mask 4 Example](quick_response-mask4.png) ![Mask 5 Example](quick_response-mask5.png) ![Mask 6 Example](quick_response-mask6.png) ![Mask 7 Example](quick_response-mask7.png)  
+Which do you think is the best?
 
 ### Rendering Options
 The `mark`, `space`, and `quiet_zone` parameters can be used to modify the generated geometry or the preview rendering. The general expectation is that the
