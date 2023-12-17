@@ -83,7 +83,7 @@
  *     3=High (~30% correctable)
  *
  * Mask Patterns
- *   These XOR masks are applied over the data area of the symbo in order to
+ *   These XOR masks are applied over the data area of the symbol in order to
  *   balance light/dark areas and avoid false-positive matches for the fixed
  *   patterns.
  *     0=checkerboard (fine)

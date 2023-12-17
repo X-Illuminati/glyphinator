@@ -169,7 +169,8 @@ The `dm_base256_append` function helps with the use of `dm_base256` by computing
 
 ### ECC Handling
 This library implements only ECC 200, the newer version of Data Matrix, which
-uses Reed-Solomon error correction over the finite field 𝔽₂₅₆.  
+uses Reed-Solomon error correction over the finite field 𝔽₂₅₆ with polynomial
+301.  
 The `data_matrix` module automatically calculates these ECC bytes based on the
 byte array that is passed to it as an input.  
 The implementation is supplied in

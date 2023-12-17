@@ -70,14 +70,12 @@ data_matrix(dm_ascii("1234"));
 
 ### Quick Response
 Include quick_response.scad in your model with the `use` command.  
-See the documentation in [quick_response.scad](barcodes/quick_response.scad)
-for more details.
+See the [Quick Response user-guide](doc/quick_response.md) for more details.
 
 ```
 use <barcodes/quick_response.scad>
 quick_response(qr_numeric([0,1,2,3,4,5,6,7,8,9]));
 ```
-
 ![quick response example](doc/quick_response-example.png)
 ![quick response example](doc/quick_response-example2.png)
 
